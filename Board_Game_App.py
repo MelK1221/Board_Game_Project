@@ -14,7 +14,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     # Add arguments
-    parser.add_argument("player", choices=[MEL, EM, ALL], help="Name of Player")
+    parser.add_argument("-player", choices=[MEL, EM, ALL], default= ALL, help="Name of Player")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
 
     # Parse arguments
