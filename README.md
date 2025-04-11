@@ -2,7 +2,9 @@
 Sisters project tracking board games :)
 
 
-Board Game Collection ManagerA simple app to log, browse, and rate board games you own or have played.
+Board Game Collection Manager
+
+A simple app to log, browse, and rate board games you own or have played.
 
 Stage 1:
 
