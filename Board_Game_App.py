@@ -40,7 +40,7 @@ def run(args: argparse.Namespace):
 
     for player in players:
         games = ", ".join(games_by_player[player])
-        print(f"{player} likes {games}.")
+        print(f"{player.capitalize()} likes {games}.")
 
     if args.verbose and args.player == ALL:
         joint_likes: set = set()
