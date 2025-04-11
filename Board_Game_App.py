@@ -1,6 +1,7 @@
 """
-# Entry point python file to start Board Game Project
-# Emily Vaughn-Kukura and Melanie Kukura
+Entry point python file to start Board Game Project.
+
+Authors: Emily Vaughn-Kukura and Melanie Kukura
 """
 
 import argparse
@@ -10,7 +11,7 @@ EM="em"
 ALL="all"
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     # Add arguments
     parser.add_argument("player", choices=[MEL, EM, ALL], help="Name of Player")
