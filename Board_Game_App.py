@@ -10,7 +10,7 @@ EM="em"
 ALL="all"
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__s)
+    parser = argparse.ArgumentParser(description=__doc__)
 
     # Add arguments
     parser.add_argument("player", choices=[MEL, EM, ALL], help="Name of Player")
