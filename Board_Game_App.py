@@ -5,6 +5,9 @@ Authors: Emily Vaughn-Kukura and Melanie Kukura
 """
 
 import argparse
+import csv
+import json
+import re
 
 MEL="mel"
 EM="em"
@@ -20,6 +23,42 @@ def parse_args() -> argparse.Namespace:
     # Parse arguments
     args = parser.parse_args()
     return args
+
+def parse_players_file(filename) -> dict:
+    #Returns empty dict if filename is improper
+
+    filename_list = re.split(r"[. ]+", filename)
+    player_games_dict = {}
+
+    # Check for proper filename format
+    if len(filename_list) != 2:
+        print("Invalid filename entered, no new player info entered into database.")
+        return player_games_dict
+
+    file_type = filename_list[1]
+
+    # Check for csv or json file type
+    if (file_type != "csv") and (file_type != "json"):
+        print("Sorry, this file type is not accepted. No new player info entered into database")
+        return player_games_dict
+    
+    # Open file and create new players dict
+    with open(filename) as upload_file:
+        if file_type == "csv":
+            csvreader = csv.DictReader(upload_file)
+            players_list = [row for row in csvreader]               
+        else:
+            players_list = json.load(upload_file)
+
+        players_keys = list(players_list[0].keys())
+
+        for person_dict in players_list:
+            player_name = person_dict[players_keys[0]]
+            games_list = person_dict[players_keys[1]].split(',')
+            games_list = [game.strip() for game in games_list]
+            player_games_dict[player_name] = games_list
+
+        return player_games_dict
 
 
 def run(args: argparse.Namespace):
@@ -54,7 +93,29 @@ def run(args: argparse.Namespace):
                 # Only keep likes if shared by all previous players
                 joint_likes = joint_likes.intersection(new_games)
         
-        print(f"All players like: {','.join(list(joint_likes))}")
+        print(f"All players like: {', '.join(list(joint_likes))}")
+
+    #Import new players list
+    new_players_file = input("If you would like to upload a new players list, please type the file name here:")
+    
+    # Handle input if no user input provided
+    if new_players_file == "":
+        print("No filename entered, no new player info entered into database.")
+        return
+    else:
+        new_players_fav_games = parse_players_file(new_players_file)
+
+    #Merge default players dict with new players dict
+    merged_games_by_player = games_by_player | new_players_fav_games
+
+    #Update players list
+    players = [player for player in merged_games_by_player]
+
+    #Print updated players and games list
+    print("See the current players list below:")
+    for player in players:
+        games = ", ".join(merged_games_by_player[player])
+        print(f"{player.capitalize()} likes {games}.")
 
 
 if __name__ == "__main__":
