@@ -33,14 +33,17 @@ Project outline:
     - `/api/games`
     - `/api/games/<player>`
 5. Add "rating" to player game info
-6. Add API PATCH method to update a rating of a game `/api/games/<player>`
-7. Add API POST and DELETE methods for `/api/games/<player>`
-8. Create "games" DB in postgresql with a 1 table, "ratings" that has 3 fields:
+6. Add basic unit tests around the existing API
+7. Add API PATCH method to update a rating of a game `/api/games/<player>`
+8. Add API POST and DELETE methods for `/api/games/<player>`
+9. Create "games" DB in postgresql with a 1 table, "ratings" that has 3 fields:
     - player (string)
     - game (string)
     - rating (int)
-9. Load data from default JSON into the table.
+10. Load data from default JSON into the table.
     - API to read from DB instead of file
     - POST/PATCH/DELETE should all result in DB updates
-10. On web server shutdown, save contents of db back to JSON file
-11. [Optional] Prettify the front-end with some basic HTML/Javascript.
+11. Add JSON schema file and validate the JSON against the schema before loading it into the DB.
+12. On web server shutdown, save contents of db back to JSON file.
+13. Add some "fixture integration/end-to-end" tests.
+14. [Optional] Prettify the front-end with some basic HTML/Javascript.
