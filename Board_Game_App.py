@@ -16,7 +16,7 @@ def parse_args() -> argparse.Namespace:
 
     # Add arguments
     parser.add_argument("-p","--player", default= ALL, help="Name of Player")
-    parser.add_argument("-f","--file",  default= "fam_fav_games.json", help="Player favorite games file")
+    parser.add_argument("-f","--file",  default= "example_files/fam_fav_games.json", help="Player favorite games file")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
 
     # Parse arguments
@@ -46,7 +46,7 @@ def parse_players_file(filename, ext) -> dict[str, list]:
             players_list = json.load(upload_file)
 
         for person_dict in players_list:
-            player_name = person_dict["Name"]
+            player_name = person_dict["Name"].capitalize()
             games_list = person_dict["Favorite Games"].split(',')
             games_list = [game.strip() for game in games_list]
             player_games_dict[player_name] = games_list
@@ -60,11 +60,7 @@ def run(args: argparse.Namespace):
     # Check for existence of path
     if os.path.exists(args.file):
         name, extension = os.path.splitext(args.file)
-        try:
-            games_by_player = parse_players_file(args.file, extension)
-        except ValueError as e:
-            print(e)
-            return
+        games_by_player = parse_players_file(args.file, extension)
     else:
         raise FileNotFoundError(f"File not found: {args.file}")
     
@@ -79,16 +75,17 @@ def run(args: argparse.Namespace):
         players = [player for player in games_by_player.keys()]
     else:
         # Check if requested player is in dict
-        if args.player.capitalize() not in games_by_player.keys():
-            msg = f"{args.player.capitalize()} is not in the loaded file."
+        req_player = args.player.capitalize()
+        if req_player not in games_by_player.keys():
+            msg = f"{req_player} is not in the loaded file."
             raise ValueError(msg)
-        players = [args.player.capitalize()]
+        players = [req_player]
 
 
     print("The following is a list of current players and their favorite games:")
     for player in players:
         games = ", ".join(games_by_player[player])
-        print(f"{player.capitalize()} likes {games}.")
+        print(f"{player} likes {games}.")
 
     if args.verbose and args.player == ALL:
         joint_likes: set = set()
