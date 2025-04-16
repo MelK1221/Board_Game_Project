@@ -16,7 +16,7 @@ def parse_args() -> argparse.Namespace:
 
     # Add arguments
     parser.add_argument("-p","--player", default= ALL, help="Name of Player")
-    parser.add_argument("-f","--file",  default= "fam_fav_games.csv", help="Player favorite games file")
+    parser.add_argument("-f","--file",  default= "fam_fav_games.json", help="Player favorite games file")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
 
     # Parse arguments
