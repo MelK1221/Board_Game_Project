@@ -11,6 +11,10 @@ import os
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+
+ALL="all"
+
 
 app = FastAPI(
     title="Board Games API",
@@ -34,7 +38,14 @@ def get_player(player_name: str):
     return app.games_by_player[player_name]
 
 
-ALL="all"
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("static/favicon.ico")
+
 
 
 def parse_args() -> argparse.Namespace:
