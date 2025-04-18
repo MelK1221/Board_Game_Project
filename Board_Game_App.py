@@ -12,6 +12,7 @@ import os
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 ALL="all"
 
@@ -22,6 +23,13 @@ app = FastAPI(
     version="1",
     servers=[{"url": "/"}],
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/favicon.ico")
+def favicon():
+    return FileResponse("static/favicon.ico")
 
 
 @app.get("/api/players/")
@@ -36,16 +44,6 @@ def get_player(player_name: str):
         raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
     return app.games_by_player[player_name]
-
-
-from fastapi.staticfiles import StaticFiles
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/favicon.ico")
-async def favicon():
-    return FileResponse("static/favicon.ico")
-
 
 
 def parse_args() -> argparse.Namespace:
