@@ -1,7 +1,6 @@
 # Board_Game_Project
 Sisters project tracking board games :)
 
-
 Board Game Collection Manager
 
 A simple app to log, browse, and rate board games you own or have played.
@@ -20,30 +19,44 @@ Stage 2:
 * Simple frontend with HTML/JS
 * Use SQLAlchemy as the ORM
 
-
 Bonus idea: Integrate with the BoardGameGeek API to fetch game info automatically.
 
+### Installation
+```
+pip install -r requirements.txt
+```
 
-Project outline:
+### Run the application
+```
+./Board_Game_App.py
+```
+Then open the UI at the desired endpoint:
+http://localhost:8080/[endpoint]
+
+### Project outline
 
 1. Introduce entrypoint file with argument parsing, hard-coded list of Emily and Melanies favorite games.
-2. Add ability to load 'favorite games' for a list of players from a file (CSV and JSON should both be supported).
+2. Add ability to load 'favorite games' for a list of players from a file (CSV and JSON should both be  supported).
 3. Move hard-coded emily and melanie list to a JSON file that is included in version control and that the entrypoint file loads by default.
-4. Introduce basic Web API using Fast API with endpoints to show list of users and their favorite games and show a single user, which support the GET method
-    - `/api/games`
-    - `/api/games/<player>`
+4. Introduce basic Web API using Fast API with endpoints to show list of users and their favorite games and show a single user, which support the GET methods
+    - `/api/players/` -> List of all players
+    - `/api/players/<player>` -> List of games the player has submitted
 5. Add "rating" to player game info
-6. Add basic unit tests around the existing API
-7. Add API PATCH method to update a rating of a game `/api/games/<player>`
-8. Add API POST and DELETE methods for `/api/games/<player>`
-9. Create "games" DB in postgresql with a 1 table, "ratings" that has 3 fields:
+6. Implement Fast API GET methods for:
+    - `/api/games/` -> List of all games
+    - `/api/games/<game>` -> List of all ratings by player for this game
+    - `/api/games/<game>/<player>` -> Game rating for this player
+7. Add basic unit tests around the existing API
+8. Add API PATCH method to update a rating of a game `/api/games/<game>/<player>`
+9. Add API POST and DELETE methods for `/api/games/<game>/<player>`
+10. Create "games" DB in postgresql with a 1 table, "ratings" that has 3 fields:
     - player (string)
     - game (string)
     - rating (int)
-10. Load data from default JSON into the table.
+11. Load data from default JSON into the table.
     - API to read from DB instead of file
     - POST/PATCH/DELETE should all result in DB updates
-11. Add JSON schema file and validate the JSON against the schema before loading it into the DB.
-12. On web server shutdown, save contents of db back to JSON file.
-13. Add some "fixture integration/end-to-end" tests.
-14. [Optional] Prettify the front-end with some basic HTML/Javascript.
+12. Add JSON schema file and validate the JSON against the schema before loading it into the DB.
+13. On web server shutdown, save contents of db back to JSON file.
+14. Add some "fixture integration/end-to-end" tests.
+15. [Optional] Prettify the front-end with some basic HTML/Javascript.
