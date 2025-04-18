@@ -10,7 +10,7 @@ import json
 import os
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI(
     title="Board Games API",
@@ -23,6 +23,15 @@ app = FastAPI(
 @app.get("/api/players/")
 def get_players():
     return app.games_by_player
+
+
+@app.get("/api/players/{player_name}")
+def get_player(player_name: str):
+    player_name = player_name.capitalize()
+    if player_name not in app.games_by_player:
+        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
+
+    return app.games_by_player[player_name]
 
 
 ALL="all"
