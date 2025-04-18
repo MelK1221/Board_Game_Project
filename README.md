@@ -28,6 +28,7 @@ pip install -r requirements.txt
 
 ### Run the application
 ```
+./Board_Game_App.py
 ```
 
 ### Project outline
