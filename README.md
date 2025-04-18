@@ -30,6 +30,8 @@ pip install -r requirements.txt
 ```
 ./Board_Game_App.py
 ```
+Then open the UI at the desired endpoint:
+http://localhost:8080/[endpoint]
 
 ### Project outline
 
