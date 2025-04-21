@@ -50,7 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     # Add arguments
-    parser.add_argument("--port", default=8080, help="Port number to run the server on")
+    parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
     parser.add_argument("-p","--player", help="Player name to get favorite games for")
     parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
@@ -60,14 +60,14 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def parse_players_file(filename, ext) -> dict[str, list]:
+def parse_players_file(filename, ext) -> list:
     """
     Returns dict created from loaded file.
     Key -> Player, Value -> Fav games list.
     Returns empty dict if filename is improper.
     """
 
-    player_games_dict = {}
+    player_games_ratings_list = []
 
     # Check for csv or json file type
     if (ext != ".csv") and (ext != ".json"):
@@ -83,12 +83,11 @@ def parse_players_file(filename, ext) -> dict[str, list]:
             players_list = json.load(upload_file)
 
         for person_dict in players_list:
-            player_name = person_dict["Name"].capitalize()
-            games_list = person_dict["Favorite Games"].split(',')
-            games_list = [game.strip() for game in games_list]
-            player_games_dict[player_name] = games_list
+            new_list_item = {"Name" : person_dict["Name"].capitalize(), "Favorite Games" : person_dict["Favorite Games"]}
+            player_games_ratings_list.append(new_list_item)
+            
 
-        return player_games_dict
+        return player_games_ratings_list
 
 
 def print_player_likes(args: argparse.Namespace, games_by_player: dict[str, list]):
