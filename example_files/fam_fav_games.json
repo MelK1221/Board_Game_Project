@@ -1,98 +1,98 @@
 [
    {
       "Name": "Em",
-      "Favorite Games": [
+      "Games": [
          {
             "Game": "Boggle",
-            "Rating": "7"
+            "Rating": 7
          },
          {
             "Game": "Hanabi",
-            "Rating": "6"
+            "Rating": 6
          },
          {
             "Game": "Mysterium",
-            "Rating": "9"
+            "Rating": 9
          },
          {
             "Game": "Rivals of Catan",
-            "Rating": "8"
+            "Rating": 8
          }
       ]
    },
    {
       "Name": "Mel",
-      "Favorite Games": [
+      "Games": [
          {
             "Game": "Codenames",
-            "Rating": "8"
+            "Rating": 8
          },
          {
             "Game": "Hanabi",
-            "Rating": "8"
+            "Rating": 8
          },
          {
             "Game": "Mysterium",
-            "Rating": "7"
+            "Rating": 7
          },
          {
             "Game": "Settlers of Catan",
-            "Rating": "6"
+            "Rating": 6
          }
       ]
    },
    {
       "Name": "Sarah",
-      "Favorite Games": [
+      "Games": [
          {
             "Game": "Hanabi",
-            "Rating": "10"
+            "Rating": 10
          },
          {
             "Game": "Herd Mentality",
-            "Rating": "8"
+            "Rating": 8
          },
          {
             "Game": "Mysterium",
-            "Rating": "9"
+            "Rating": 9
          },
          {
             "Game": "Ticket to Ride",
-            "Rating": "6"
+            "Rating": 6
          }
       ]
    },
    {
       "Name": "Mike",
-      "Favorite Games": [
+      "Games": [
          {
             "Game": "Stratego",
-            "Rating": "8"
+            "Rating": 8
          },
          {
             "Game": "Risk",
-            "Rating": "9"
+            "Rating": 9
          },
          {
             "Game": "Monopoly",
-            "Rating": "5"
+            "Rating": 5
          }
       ]
    },
    {
       "Name": "Laurie",
-      "Favorite Games": [
+      "Games": [
          {
             "Game": "Codenames",
-            "Rating": "6"
+            "Rating": 6
          },
          {
             "Game": "Boggle",
-            "Rating": "7"
+            "Rating": 7
          },
          {
             "Game": "Rummy",
-            "Rating": "10"
+            "Rating": 10
          }
       ]
    }
