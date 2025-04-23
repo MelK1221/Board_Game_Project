@@ -44,9 +44,49 @@ def get_player(player_name: str):
     if player_name not in players:
         raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
-    player_idx = find_player_idx(app.games_by_player, "Name", player_name)
+    player_idx = find_player_idx(app.games_by_player, player_name)
 
     return app.games_by_player[player_idx]
+
+
+@app.get("/api/games/")
+def get_games():
+    all_games_list = all_games(app.games_by_player)
+    return all_games_list
+
+
+@app.get("/api/games/{game}")
+def get_game_ratings(game: str):
+    player_ratings = {}
+    all_games_list = all_games(app.games_by_player)
+    if game.capitalize() not in all_games_list:
+        raise HTTPException(status_code=404, detail=f"Game {game} not found.")
+
+    for player in app.games_by_player:
+        for cur_game in player["Games"]:
+            if cur_game["Game"].capitalize() == game.capitalize():
+                 player_ratings[player["Name"]] = cur_game["Rating"]
+
+    return player_ratings
+
+
+@app.get("/api/games/{game}/{player_name}")
+def get_player_rating(game: str, player_name: str):
+    player_rating = {}
+    player_idx = find_player_idx(app.games_by_player, player_name.capitalize())
+    if player_idx == -1:
+        raise HTTPException(status_code=404, detail=f"Player {player_name.capitalize()} not found.")
+
+    game_list = find_games_list(app.games_by_player, player_idx)
+    if game.capitalize() not in game_list:
+        raise HTTPException(status_code=404, detail=f"Game {game.capitalize()} not rated by this player.")
+    
+    games_dict_list = app.games_by_player[player_idx]["Games"]
+    for cur_game in games_dict_list:
+        if cur_game["Game"].capitalize() == game.capitalize():
+            player_rating["Rating"] = cur_game["Rating"]
+
+    return player_rating
 
 
 def parse_args() -> argparse.Namespace:
@@ -92,27 +132,51 @@ def parse_players_file(filename, ext) -> list:
 
         return player_games_ratings_list
 
-def find_player_idx(dict_list: list[dict], key: str, value: str) -> int:
+
+def find_player_idx(dict_list: list[dict], value: str) -> int:
+    """
+    Finds the list index of the requested player.
+    value is the player name.
+    """
+    
     # Find player index in list
     index = 0
     for dictionary in dict_list:
-        if dictionary[key] == value:
+        if dictionary["Name"] == value:
             return index
         index += 1
     return -1
 
+
 def find_games_list(dict_list: list[dict], player_idx: int,) -> list:
     """
     Returns list of games specified player
-    (value) has rated. key should always be
-    "Name".
+    (represented by list index) has rated. 
     """
 
     # Convert player games into list
     games_ratings_list = dict_list[player_idx]["Games"]
-    games_list = [game["Game"] for game in games_ratings_list]
+    games_list = [game["Game"].capitalize() for game in games_ratings_list]
 
     return games_list
+
+
+def all_games(dic_list: list[dict]):
+    """
+    Create list of all games rated.
+    """
+    
+    all_games = []
+    for idx in range(len(app.games_by_player)):
+        player_game_list = find_games_list(app.games_by_player, idx)
+        if not all_games:
+            all_games = list(map(lambda g: g.capitalize(),player_game_list))
+        else:
+            for game in player_game_list:
+                if game.capitalize() not in all_games:
+                    all_games.append(game.capitalize())
+    
+    return all_games
 
 
 def print_player_likes(args: argparse.Namespace, games_by_player: list):
@@ -135,7 +199,7 @@ def print_player_likes(args: argparse.Namespace, games_by_player: list):
 
     print("The following is a list of current players and their favorite games:")
     for player in players_to_disp:
-        player_idx = find_player_idx(games_by_player, "Name", player)
+        player_idx = find_player_idx(games_by_player, player)
         games_list = find_games_list(games_by_player, player_idx)
         games = ", ".join(games_list)
         print(f"{player} likes {games}.")
