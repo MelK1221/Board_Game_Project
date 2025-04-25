@@ -64,7 +64,7 @@ def get_game_ratings(game: str):
 
     for player in app.games_by_player:
         for cur_game in player["Games"]:
-            if cur_game["Game"].capitalize() == game.capitalize():
+            if cur_game["Game"] == game.capitalize():
                  player_ratings[player["Name"]] = cur_game["Rating"]
 
     return player_ratings
@@ -83,7 +83,7 @@ def get_player_rating(game: str, player_name: str):
     
     games_dict_list = app.games_by_player[player_idx]["Games"]
     for cur_game in games_dict_list:
-        if cur_game["Game"].capitalize() == game.capitalize():
+        if cur_game["Game"] == game.capitalize():
             player_rating["Rating"] = cur_game["Rating"]
 
     return player_rating
@@ -127,6 +127,8 @@ def parse_players_file(filename, ext) -> list:
 
         for person_dict in players_list:
             person_dict["Name"] = person_dict["Name"].capitalize()
+            for game in person_dict["Games"]:
+                game["Game"] = game["Game"].capitalize()
             player_games_ratings_list.append(person_dict)
             
 
@@ -156,25 +158,25 @@ def find_games_list(games_by_player: list[dict], player_idx: int) -> list:
 
     # Convert player games into list
     games_ratings_list = games_by_player[player_idx]["Games"]
-    games_list = [game["Game"].capitalize() for game in games_ratings_list]
+    games_list = [game["Game"] for game in games_ratings_list]
 
     return games_list
 
 
-def all_games(dic_list: list[dict]):
+def all_games(games_by_player: list[dict]):
     """
     Create list of all games rated.
     """
     
     all_games = []
-    for idx in range(len(app.games_by_player)):
-        player_game_list = find_games_list(app.games_by_player, idx)
+    for idx in range(len(games_by_player)):
+        player_game_list = find_games_list(games_by_player, idx)
         if not all_games:
-            all_games = list(map(lambda g: g.capitalize(),player_game_list))
+            all_games = player_game_list
         else:
             for game in player_game_list:
-                if game.capitalize() not in all_games:
-                    all_games.append(game.capitalize())
+                if game not in all_games:
+                    all_games.append(game)
     
     return all_games
 
@@ -207,7 +209,7 @@ def print_player_likes(args: argparse.Namespace, games_by_player: list):
     if args.verbose and args.player == ALL:
         joint_likes: set = set()
         for player in players:
-            player_idx = find_player_idx(games_by_player, "Name", player)
+            player_idx = find_player_idx(games_by_player, player)
             new_games = set(find_games_list(games_by_player, player_idx))
 
             if not joint_likes:
