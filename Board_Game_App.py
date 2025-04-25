@@ -40,17 +40,20 @@ def get_players():
 @app.get("/api/players/{player_name}")
 def get_player(player_name: str):
     player_name = player_name.capitalize()
-    if player_name not in app.games_by_player:
+    players = [player["Name"] for player in app.games_by_player]
+    if player_name not in players:
         raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
-    return app.games_by_player[player_name]
+    player_idx = find_player_idx(app.games_by_player, "Name", player_name)
+
+    return app.games_by_player[player_idx]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     # Add arguments
-    parser.add_argument("--port", default=8080, help="Port number to run the server on")
+    parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
     parser.add_argument("-p","--player", help="Player name to get favorite games for")
     parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
@@ -60,14 +63,14 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def parse_players_file(filename, ext) -> dict[str, list]:
+def parse_players_file(filename, ext) -> list:
     """
     Returns dict created from loaded file.
     Key -> Player, Value -> Fav games list.
     Returns empty dict if filename is improper.
     """
 
-    player_games_dict = {}
+    player_games_ratings_list = []
 
     # Check for csv or json file type
     if (ext != ".csv") and (ext != ".json"):
@@ -83,40 +86,65 @@ def parse_players_file(filename, ext) -> dict[str, list]:
             players_list = json.load(upload_file)
 
         for person_dict in players_list:
-            player_name = person_dict["Name"].capitalize()
-            games_list = person_dict["Favorite Games"].split(',')
-            games_list = [game.strip() for game in games_list]
-            player_games_dict[player_name] = games_list
+            person_dict["Name"] = person_dict["Name"].capitalize()
+            player_games_ratings_list.append(person_dict)
+            
 
-        return player_games_dict
+        return player_games_ratings_list
+
+def find_player_idx(games_by_player: list[dict], key: str, value: str) -> int:
+    # Find player index in list
+    index = 0
+    for dictionary in games_by_player:
+        if dictionary[key] == value:
+            return index
+        index += 1
+    return -1
 
 
-def print_player_likes(args: argparse.Namespace, games_by_player: dict[str, list]):
+def find_games_list(games_by_player: list[dict], player_idx: int) -> list:
+    """
+    Returns list of games associated with
+    provided player index.
+    """
+
+    # Convert player games into list
+    games_ratings_list = games_by_player[player_idx]["Games"]
+    games_list = [game["Game"] for game in games_ratings_list]
+
+    return games_list
+
+
+def print_player_likes(args: argparse.Namespace, games_by_player: list):
     """
     Print the players and their favorite games.
     If verbose is set, print the games that all players like.
     """
     # Print requested player(s) and their favorite games    
-    players: list = []
+    players = [player['Name'] for player in games_by_player]
+    players_to_disp: list = []
     if args.player == ALL:
-        players = [player for player in games_by_player.keys()]
+        players_to_disp = players
     else:
         # Check if requested player is in dict
         req_player = args.player.capitalize()
-        if req_player not in games_by_player.keys():
+        if req_player not in players:
             msg = f"{req_player} is not in the loaded file."
             raise ValueError(msg)
-        players = [req_player]
+        players_to_disp = [req_player]
 
     print("The following is a list of current players and their favorite games:")
-    for player in players:
-        games = ", ".join(games_by_player[player])
+    for player in players_to_disp:
+        player_idx = find_player_idx(games_by_player, "Name", player)
+        games_list = find_games_list(games_by_player, player_idx)
+        games = ", ".join(games_list)
         print(f"{player} likes {games}.")
 
     if args.verbose and args.player == ALL:
         joint_likes: set = set()
         for player in players:
-            new_games = set(games_by_player[player])
+            player_idx = find_player_idx(games_by_player, "Name", player)
+            new_games = set(find_games_list(games_by_player, player_idx))
 
             if not joint_likes:
                 # Initialize intersection for new player
@@ -135,7 +163,7 @@ def print_player_likes(args: argparse.Namespace, games_by_player: dict[str, list
 
 
 def run(args: argparse.Namespace):
-    games_by_player = {}
+    games_by_player = []
 
     # Check for existence of path
     if os.path.exists(args.file):
