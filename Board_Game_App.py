@@ -86,30 +86,30 @@ def parse_players_file(filename, ext) -> list:
             players_list = json.load(upload_file)
 
         for person_dict in players_list:
-            new_list_item = {"Name" : person_dict["Name"].capitalize(), "Games" : person_dict["Games"]}
-            player_games_ratings_list.append(new_list_item)
+            person_dict["Name"] = person_dict["Name"].capitalize()
+            player_games_ratings_list.append(person_dict)
             
 
         return player_games_ratings_list
 
-def find_player_idx(dict_list: list[dict], key: str, value: str) -> int:
+def find_player_idx(games_by_player: list[dict], key: str, value: str) -> int:
     # Find player index in list
     index = 0
-    for dictionary in dict_list:
+    for dictionary in games_by_player:
         if dictionary[key] == value:
             return index
         index += 1
     return -1
 
-def find_games_list(dict_list: list[dict], player_idx: int,) -> list:
+
+def find_games_list(games_by_player: list[dict], player_idx: int) -> list:
     """
-    Returns list of games specified player
-    (value) has rated. key should always be
-    "Name".
+    Returns list of games associated with
+    provided player index.
     """
 
     # Convert player games into list
-    games_ratings_list = dict_list[player_idx]["Games"]
+    games_ratings_list = games_by_player[player_idx]["Games"]
     games_list = [game["Game"] for game in games_ratings_list]
 
     return games_list
@@ -143,7 +143,8 @@ def print_player_likes(args: argparse.Namespace, games_by_player: list):
     if args.verbose and args.player == ALL:
         joint_likes: set = set()
         for player in players:
-            new_games = set(find_games_list(games_by_player, "Name", player))
+            player_idx = find_player_idx(games_by_player, "Name", player)
+            new_games = set(find_games_list(games_by_player, player_idx))
 
             if not joint_likes:
                 # Initialize intersection for new player
