@@ -24,6 +24,7 @@ app = FastAPI(
     servers=[{"url": "/"}],
 )
 
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -32,6 +33,7 @@ def favicon():
     return FileResponse("static/favicon.ico")
 
 
+### API endpoints ###
 @app.get("/api/players/")
 def get_players():
     return app.games_by_player
@@ -49,20 +51,7 @@ def get_player(player_name: str):
     return app.games_by_player[player_idx]
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    # Add arguments
-    parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
-    parser.add_argument("-p","--player", help="Player name to get favorite games for")
-    parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
-
-    # Parse arguments
-    args = parser.parse_args()
-    return args
-
-
+### Supporting functions ###
 def parse_players_file(filename, ext) -> list:
     """
     Returns dict created from loaded file.
@@ -91,6 +80,7 @@ def parse_players_file(filename, ext) -> list:
             
 
         return player_games_ratings_list
+
 
 def find_player_idx(games_by_player: list[dict], key: str, value: str) -> int:
     # Find player index in list
@@ -162,6 +152,7 @@ def print_player_likes(args: argparse.Namespace, games_by_player: list):
             print(f"All players like: {', '.join(list(joint_likes))}")
 
 
+### Main application loop ###
 def run(args: argparse.Namespace):
     games_by_player = []
 
@@ -182,6 +173,21 @@ def run(args: argparse.Namespace):
     else:
         app.games_by_player = games_by_player
         uvicorn.run(app, host="localhost", port=args.port)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    # Add arguments
+    parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
+    parser.add_argument("-p","--player", help="Player name to get favorite games for")
+    parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
+
+    # Parse arguments
+    args = parser.parse_args()
+    return args
+
 
 if __name__ == "__main__":
     args = parse_args()
