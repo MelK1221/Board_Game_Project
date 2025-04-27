@@ -8,6 +8,7 @@ import argparse
 import csv
 import json
 import os
+from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -16,6 +17,12 @@ from fastapi.staticfiles import StaticFiles
 
 ALL="all"
 
+class PlayerNotFoundError(Exception):
+    """Custom exception for player not found."""
+    def __init__(self, player_name):
+        self.player_name = player_name
+        self.message = f"Player {self.player_name} not found."
+        super().__init__(self.message)
 
 app = FastAPI(
     title="Board Games API",
@@ -77,19 +84,22 @@ def parse_players_file(filename, ext) -> list:
         for person_dict in players_list:
             person_dict["Name"] = person_dict["Name"].capitalize()
             player_games_ratings_list.append(person_dict)
-            
 
         return player_games_ratings_list
 
 
 def find_player_idx(games_by_player: list[dict], key: str, value: str) -> int:
     # Find player index in list
-    index = 0
-    for dictionary in games_by_player:
+    player_index: Optional[int] = None
+    for index, dictionary in enumerate(games_by_player):
         if dictionary[key] == value:
-            return index
-        index += 1
-    return -1
+            player_index = index
+            break
+    
+    if player_index is None:
+        raise PlayerNotFoundError(value)
+
+    return player_index
 
 
 def find_games_list(games_by_player: list[dict], player_idx: int) -> list:
@@ -119,8 +129,7 @@ def print_player_likes(args: argparse.Namespace, games_by_player: list):
         # Check if requested player is in dict
         req_player = args.player.capitalize()
         if req_player not in players:
-            msg = f"{req_player} is not in the loaded file."
-            raise ValueError(msg)
+            raise PlayerNotFoundError(req_player)
         players_to_disp = [req_player]
 
     print("The following is a list of current players and their favorite games:")
@@ -194,7 +203,5 @@ if __name__ == "__main__":
     
     try:
         run(args)
-    except FileNotFoundError as e:
-        print(e)
-    except ValueError as e:
+    except (FileNotFoundError, PlayerNotFoundError, ValueError) as e:
         print(e)

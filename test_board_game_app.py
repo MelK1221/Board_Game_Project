@@ -1,5 +1,5 @@
 import pytest
-from Board_Game_App import find_games_list, find_player_idx
+from Board_Game_App import find_games_list, find_player_idx, PlayerNotFoundError
 
 em_games = [
     {"Game": "Boggle", "Rating": 7},
@@ -28,8 +28,9 @@ def test_find_player_idx():
     assert res == 0
 
 def test_find_player_idx_player_not_present():
-    res = find_player_idx(games_by_player=games_data, key="Name", value="Bad")
-    assert res == -1
+    with pytest.raises(PlayerNotFoundError):
+        find_player_idx(games_by_player=games_data, key="Name", value="Bad")
+
 
 def test_find_games_list():
     res = find_games_list(games_by_player=games_data, player_idx=0)
