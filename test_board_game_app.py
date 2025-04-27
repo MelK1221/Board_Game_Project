@@ -27,6 +27,7 @@ def test_find_player_idx():
     res = find_player_idx(games_by_player=games_data, key="Name", value="Em")
     assert res == 0
 
+
 def test_find_player_idx_player_not_present():
     with pytest.raises(PlayerNotFoundError):
         find_player_idx(games_by_player=games_data, key="Name", value="Bad")
@@ -35,6 +36,7 @@ def test_find_player_idx_player_not_present():
 def test_find_games_list():
     res = find_games_list(games_by_player=games_data, player_idx=0)
     assert res == ["Boggle", "Hanabi"]
+
 
 def test_find_games_list_invalid_index():
     with pytest.raises(IndexError):
