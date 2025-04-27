@@ -8,6 +8,7 @@ import argparse
 import csv
 import json
 import os
+from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -16,6 +17,12 @@ from fastapi.staticfiles import StaticFiles
 
 ALL="all"
 
+class PlayerNotFoundError(Exception):
+    """Custom exception for player not found."""
+    def __init__(self, player_name):
+        self.player_name = player_name
+        self.message = f"Player {self.player_name} not found."
+        super().__init__(self.message)
 
 app = FastAPI(
     title="Board Games API",
@@ -23,6 +30,7 @@ app = FastAPI(
     version="1",
     servers=[{"url": "/"}],
 )
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -32,6 +40,7 @@ def favicon():
     return FileResponse("static/favicon.ico")
 
 
+### API endpoints ###
 @app.get("/api/players/")
 def get_players():
     return app.games_by_player
@@ -49,20 +58,7 @@ def get_player(player_name: str):
     return app.games_by_player[player_idx]
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    # Add arguments
-    parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
-    parser.add_argument("-p","--player", help="Player name to get favorite games for")
-    parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
-
-    # Parse arguments
-    args = parser.parse_args()
-    return args
-
-
+### Supporting functions ###
 def parse_players_file(filename, ext) -> list:
     """
     Returns dict created from loaded file.
@@ -88,18 +84,22 @@ def parse_players_file(filename, ext) -> list:
         for person_dict in players_list:
             person_dict["Name"] = person_dict["Name"].capitalize()
             player_games_ratings_list.append(person_dict)
-            
 
         return player_games_ratings_list
 
+
 def find_player_idx(games_by_player: list[dict], key: str, value: str) -> int:
     # Find player index in list
-    index = 0
-    for dictionary in games_by_player:
+    player_index: Optional[int] = None
+    for index, dictionary in enumerate(games_by_player):
         if dictionary[key] == value:
-            return index
-        index += 1
-    return -1
+            player_index = index
+            break
+    
+    if player_index is None:
+        raise PlayerNotFoundError(value)
+
+    return player_index
 
 
 def find_games_list(games_by_player: list[dict], player_idx: int) -> list:
@@ -129,8 +129,7 @@ def print_player_likes(args: argparse.Namespace, games_by_player: list):
         # Check if requested player is in dict
         req_player = args.player.capitalize()
         if req_player not in players:
-            msg = f"{req_player} is not in the loaded file."
-            raise ValueError(msg)
+            raise PlayerNotFoundError(req_player)
         players_to_disp = [req_player]
 
     print("The following is a list of current players and their favorite games:")
@@ -162,6 +161,7 @@ def print_player_likes(args: argparse.Namespace, games_by_player: list):
             print(f"All players like: {', '.join(list(joint_likes))}")
 
 
+### Main application loop ###
 def run(args: argparse.Namespace):
     games_by_player = []
 
@@ -183,12 +183,25 @@ def run(args: argparse.Namespace):
         app.games_by_player = games_by_player
         uvicorn.run(app, host="localhost", port=args.port)
 
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    # Add arguments
+    parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
+    parser.add_argument("-p","--player", help="Player name to get favorite games for")
+    parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
+
+    # Parse arguments
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == "__main__":
     args = parse_args()
     
     try:
         run(args)
-    except FileNotFoundError as e:
-        print(e)
-    except ValueError as e:
+    except (FileNotFoundError, PlayerNotFoundError, ValueError) as e:
         print(e)
