@@ -121,11 +121,9 @@ def parse_players_file(filename, ext) -> list:
 
         for person_dict in players_list:
             person_dict["Name"] = person_dict["Name"].capitalize()
-            for game in person_dict["Games"]:
-                game["Game"] = game["Game"].capitalize()
+            person_dict["Games"] = {game.capitalize(): rating for game, rating in person_dict["Games"].items()}
             players_games_list.append(person_dict)
             
-
         return players_games_list
 
 
