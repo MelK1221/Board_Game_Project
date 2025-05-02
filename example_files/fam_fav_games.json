@@ -1,99 +1,45 @@
 [
    {
       "Name": "Em",
-      "Games": [
-         {
-            "Game": "Boggle",
-            "Rating": 7
-         },
-         {
-            "Game": "Hanabi",
-            "Rating": 6
-         },
-         {
-            "Game": "Mysterium",
-            "Rating": 9
-         },
-         {
-            "Game": "Rivals of Catan",
-            "Rating": 8
-         }
-      ]
+      "Games": {
+         "Boggle": 7,
+         "Hanabi": 6,
+         "Mysterium": 9,
+         "Rivals of Catan": 8
+      }
    },
    {
       "Name": "Mel",
-      "Games": [
-         {
-            "Game": "Codenames",
-            "Rating": 8
-         },
-         {
-            "Game": "Hanabi",
-            "Rating": 8
-         },
-         {
-            "Game": "Mysterium",
-            "Rating": 7
-         },
-         {
-            "Game": "Settlers of Catan",
-            "Rating": 6
-         }
-      ]
+      "Games": {
+         "Codenames": 8,
+         "Hanabi": 8,
+         "Mysterium": 7,
+         "Settlers of Catan": 6
+      }
    },
    {
       "Name": "Sarah",
-      "Games": [
-         {
-            "Game": "Hanabi",
-            "Rating": 10
-         },
-         {
-            "Game": "Herd Mentality",
-            "Rating": 8
-         },
-         {
-            "Game": "Mysterium",
-            "Rating": 9
-         },
-         {
-            "Game": "Ticket to Ride",
-            "Rating": 6
-         }
-      ]
+      "Games": {
+         "Hanabi": 10,
+         "Herd Mentality": 8,
+         "Mysterium": 9,
+         "Ticket to Ride": 6
+      }
    },
    {
       "Name": "Mike",
-      "Games": [
-         {
-            "Game": "Stratego",
-            "Rating": 8
-         },
-         {
-            "Game": "Risk",
-            "Rating": 9
-         },
-         {
-            "Game": "Monopoly",
-            "Rating": 5
-         }
-      ]
+      "Games": {
+         "Stratego": 8,
+         "Risk": 9,
+         "Monopoly": 5
+      }
    },
    {
       "Name": "Laurie",
-      "Games": [
-         {
-            "Game": "Codenames",
-            "Rating": 6
-         },
-         {
-            "Game": "Boggle",
-            "Rating": 7
-         },
-         {
-            "Game": "Rummy",
-            "Rating": 10
-         }
-      ]
+      "Games": {
+         "Codenames": 6,
+         "Boggle": 7,
+         "Rummy": 10
+      }
    }
 ]
