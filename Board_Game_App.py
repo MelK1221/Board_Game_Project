@@ -34,14 +34,13 @@ def favicon():
 
 @app.get("/api/players/")
 def get_players():
-    return app.players_games_list
+    return app.games_by_player
 
 
 @app.get("/api/players/{player_name}")
 def get_player(player_name: str):
     player_name = player_name.capitalize()
-    players = [player["Name"] for player in app.players_games_list]
-    if player_name not in players:
+    if player_name not in app.games_by_player.keys():
         raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
     return app.games_by_player[player_name]
@@ -54,14 +53,14 @@ def get_games():
 
 @app.get("/api/games/{game}")
 def get_game_ratings(game: str):
+    game = game.capitalize()
     player_ratings = {}
-    if game.capitalize() not in app.all_player_games:
+    if game not in app.all_player_games:
         raise HTTPException(status_code=404, detail=f"Game {game} not found.")
 
-    for name, game_list in app.games_by_player.items():
-        for player_game in game_list:
-            if player_game["Game"] == game.capitalize():
-                player_ratings[name] = player_game["Rating"]
+    for name, game_ratings in app.games_by_player.items():
+        if game in game_ratings.keys():
+            player_ratings[name] = game_ratings[game.capitalize()]
 
     return player_ratings
 
@@ -74,13 +73,10 @@ def get_player_rating(game: str, player_name: str):
     if player_name not in app.games_by_player.keys():
         raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
-    game_list = [player_game["Game"] for player_game in app.games_by_player[player_name]]
-    if game not in game_list:
+    if game not in app.games_by_player[player_name].keys():
         raise HTTPException(status_code=404, detail=f"Game {game} not rated by this player.")
 
-    player_rating = next(player_game for player_game in app.games_by_player[player_name] if player_game["Game"] == game)
-
-    return player_rating["Rating"]
+    return app.games_by_player[player_name][game]
 
 
 def parse_args() -> argparse.Namespace:
@@ -133,13 +129,9 @@ def create_games_by_player(players_games_list):
     games keyed by player.
     """
     
-    
     games_by_player = {}
     for player in players_games_list:
-        player_games = []
-        for game in player["Games"]:
-            player_games.append({"Game": game["Game"], "Rating": game["Rating"]})
-        games_by_player[player["Name"]] = player_games
+        games_by_player[player["Name"]] = player["Games"]
     
     return games_by_player
 
@@ -151,13 +143,8 @@ def all_games(games_by_player: dict[str, list]):
     
     all_games = []
     for player in games_by_player.keys():
-        player_game_list = [player_game["Game"] for player_game in games_by_player[player]]
-        if not all_games:
-            all_games = player_game_list
-        else:
-            for game in player_game_list:
-                if game not in all_games:
-                    all_games.append(game)
+        player_game_list = [rated_game for rated_game in games_by_player[player]]
+        all_games = list(set(all_games + player_game_list))
     
     return all_games
 
@@ -229,9 +216,12 @@ def run(args: argparse.Namespace):
     if args.player:
         print_player_likes(args, games_by_player)
     else:
-        app.players_games_list = players_games_list
+        # Maps a player to a dict of the games they have rated
         app.games_by_player = games_by_player
+        # List of all unique games that have been rated by players
         app.all_player_games = all_player_games
+
+        #Start server
         uvicorn.run(app, host="localhost", port=args.port)
 
 if __name__ == "__main__":
