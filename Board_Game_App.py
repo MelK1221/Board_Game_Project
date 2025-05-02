@@ -60,7 +60,7 @@ def get_game_ratings(game: str):
 
     for name, game_ratings in app.games_by_player.items():
         if game in game_ratings.keys():
-            player_ratings[name] = game_ratings[game.capitalize()]
+            player_ratings[name] = game_ratings[game]
 
     return player_ratings
 
@@ -74,7 +74,7 @@ def get_player_rating(game: str, player_name: str):
         raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
     if game not in app.games_by_player[player_name].keys():
-        raise HTTPException(status_code=404, detail=f"Game {game} not rated by this player.")
+        raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
 
     return app.games_by_player[player_name][game]
 
@@ -143,7 +143,7 @@ def all_games(games_by_player: dict[str, list]):
     
     all_games = []
     for player in games_by_player.keys():
-        player_game_list = [rated_game for rated_game in games_by_player[player]]
+        player_game_list = list(games_by_player[player].keys())
         all_games = list(set(all_games + player_game_list))
     
     return all_games
@@ -221,7 +221,7 @@ def run(args: argparse.Namespace):
         # List of all unique games that have been rated by players
         app.all_player_games = all_player_games
 
-        #Start server
+        # Start server
         uvicorn.run(app, host="localhost", port=args.port)
 
 if __name__ == "__main__":
