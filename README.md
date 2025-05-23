@@ -33,6 +33,19 @@ pip install -r requirements.txt
 Then open the UI at the desired endpoint:
 http://localhost:8080/[endpoint]
 
+
+### Test the application
+pytest is the testing framework: https://docs.pytest.org/en/stable/getting-started.html#get-started
+
+To run all files of the form test_*.py or *_test.py in the current directory and its subdirectories:
+```
+pytest
+```
+To run just a particular file:
+```
+pytest test_board_game_app.py 
+```
+
 ### Project outline
 
 1. Introduce entrypoint file with argument parsing, hard-coded list of Emily and Melanies favorite games.
