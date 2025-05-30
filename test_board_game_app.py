@@ -1,6 +1,9 @@
 import pytest
-from Board_Game_App import create_games_by_player, PlayerNotFoundError
+from fastapi.testclient import TestClient
+from Board_Game_App import create_games_by_player, all_games, PlayerNotFoundError, app
+from collections import Counter
 
+### Setup Test Data ###
 em_games = {
          "Boggle": 7,
          "Hanabi": 6,
@@ -26,6 +29,15 @@ games_data = [
     }
 ]
 
+client = TestClient(app)
+
+games_by_player = create_games_by_player(games_data)
+app.games_by_player = games_by_player
+
+all_player_games = all_games(games_by_player)
+app.all_player_games = all_player_games
+
+### Test Supporting Funtions ###
 def test_create_games_by_player():
     res = create_games_by_player(players_games_list=games_data)
     assert res == {
@@ -42,3 +54,44 @@ def test_create_games_by_player():
             "Settlers of Catan": 6
             }
         }
+    
+def test_all_games():
+    games = create_games_by_player(games_data)
+    res = all_games(games_by_player = games)
+    expected_list = ["Boggle", "Hanabi", "Mysterium", "Rivals of Catan", "Codenames", "Settlers of Catan"]
+    assert Counter(res) == Counter(expected_list)
+
+
+### Test API Get Endpoints ###
+def test_get_players():
+    response = client.get("/api/players")
+    assert response.status_code == 200
+    assert response.json() == games_by_player
+
+def test_get_player():
+    response = client.get("/api/players/em")
+    assert response.status_code == 200
+    assert response.json() == {
+        "Boggle": 7,
+        "Hanabi": 6,
+        "Mysterium": 9,
+        "Rivals of Catan": 8
+        }
+    
+def test_get_games():
+    response = client.get("/api/games")
+    assert response.status_code == 200
+    assert response.json() == all_player_games
+
+def test_get_game_ratings():
+    response = client.get("/api/games/hanabi")
+    assert response.status_code == 200
+    assert response.json() == {
+        "Em": 6,
+        "Mel": 8
+    }
+
+def test_get_player_rating():
+    response = client.get("/api/games/hanabi/mel")
+    assert response.status_code == 200
+    assert response.json() == 8
