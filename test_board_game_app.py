@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+from fastapi import HTTPException
 from Board_Game_App import create_games_by_player, all_games, PlayerNotFoundError, app
 from collections import Counter
 
@@ -78,6 +79,10 @@ def test_get_player():
         "Rivals of Catan": 8
         }
     
+def test_get_player_invalid_name():
+    with pytest.raises(PlayerNotFoundError):
+        response = client.get("/api/players/bad")
+    
 def test_get_games():
     response = client.get("/api/games")
     assert response.status_code == 200
@@ -91,7 +96,22 @@ def test_get_game_ratings():
         "Mel": 8
     }
 
+def test_get_game_ratings_invalid_game():
+    response = client.get("/api/games/zelda")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Game Zelda not found."}
+
 def test_get_player_rating():
     response = client.get("/api/games/hanabi/mel")
     assert response.status_code == 200
     assert response.json() == 8
+
+def test_get_player_rating_invalid_name():
+    with pytest.raises(PlayerNotFoundError):
+        response = client.get("/api/games/hanabi/bad")
+
+def test_get_player_rating_invalid_game():
+    response = client.get("/api/games/zelda/em")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Game Zelda not rated by Em."}
+  
