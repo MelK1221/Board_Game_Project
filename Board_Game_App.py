@@ -8,6 +8,7 @@ import argparse
 import csv
 import json
 import os
+from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -16,6 +17,12 @@ from fastapi.staticfiles import StaticFiles
 
 ALL="all"
 
+class PlayerNotFoundError(Exception):
+    """Custom exception for player not found."""
+    def __init__(self, player_name):
+        self.player_name = player_name
+        self.message = f"Player {self.player_name} not found."
+        super().__init__(self.message)
 
 app = FastAPI(
     title="Board Games API",
@@ -23,6 +30,7 @@ app = FastAPI(
     version="1",
     servers=[{"url": "/"}],
 )
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -32,6 +40,7 @@ def favicon():
     return FileResponse("static/favicon.ico")
 
 
+### API endpoints ###
 @app.get("/api/players/")
 def get_players():
     return app.games_by_player
@@ -71,7 +80,7 @@ def get_player_rating(game: str, player_name: str):
     player_name = player_name.capitalize()
     game = game.capitalize()
     if player_name not in app.games_by_player.keys():
-        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
+        raise PlayerNotFoundError(player_name)
 
     if game not in app.games_by_player[player_name].keys():
         raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
@@ -79,20 +88,7 @@ def get_player_rating(game: str, player_name: str):
     return app.games_by_player[player_name][game]
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    # Add arguments
-    parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
-    parser.add_argument("-p","--player", help="Player name to get favorite games for")
-    parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
-
-    # Parse arguments
-    args = parser.parse_args()
-    return args
-
-
+### Supporting functions ###
 def parse_players_file(filename, ext) -> list:
     """
     Returns dict created from loaded file.
@@ -163,8 +159,7 @@ def print_player_likes(args: argparse.Namespace, games_by_player):
         # Check if requested player is in dict
         req_player = args.player.capitalize()
         if req_player not in players:
-            msg = f"{req_player} is not in the loaded file."
-            raise ValueError(msg)
+            raise PlayerNotFoundError(req_player)
         players_to_disp = [req_player]
 
     print("The following is a list of current players and the games they have rated:")
@@ -194,6 +189,7 @@ def print_player_likes(args: argparse.Namespace, games_by_player):
             print(f"All players have rated: {', '.join(list(joint_likes))}")
 
 
+### Main application loop ###
 def run(args: argparse.Namespace):
     players_games_list = []
 
@@ -224,12 +220,24 @@ def run(args: argparse.Namespace):
         # Start server
         uvicorn.run(app, host="localhost", port=args.port)
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    # Add arguments
+    parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
+    parser.add_argument("-p","--player", help="Player name to get favorite games for")
+    parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
+
+    # Parse arguments
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == "__main__":
     args = parse_args()
     
     try:
         run(args)
-    except FileNotFoundError as e:
-        print(e)
-    except ValueError as e:
+    except (FileNotFoundError, PlayerNotFoundError, ValueError) as e:
         print(e)
