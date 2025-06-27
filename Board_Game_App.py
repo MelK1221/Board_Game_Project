@@ -8,15 +8,22 @@ import argparse
 import csv
 import json
 import os
-from typing import Optional
+from typing import Optional, Dict
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import RootModel
+
 
 ALL="all"
 
+class PlayerGameRatings(RootModel[Dict[str, int]]):
+   pass
+
+class GamesByPlayer(RootModel[Dict[str, PlayerGameRatings]]):
+    pass
 class PlayerNotFoundError(Exception):
     """Custom exception for player not found."""
     def __init__(self, player_name):
@@ -41,18 +48,18 @@ def favicon():
 
 
 ### API endpoints ###
-@app.get("/api/players/")
+@app.get("/api/players/", response_model=GamesByPlayer)
 def get_players():
-    return app.games_by_player
+    return GamesByPlayer({name: PlayerGameRatings(ratings) for name, ratings in app.games_by_player.items()})
 
 
-@app.get("/api/players/{player_name}")
+@app.get("/api/players/{player_name}", response_model=PlayerGameRatings)
 def get_player(player_name: str):
     player_name = player_name.capitalize()
     if player_name not in app.games_by_player.keys():
         raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
-    return app.games_by_player[player_name]
+    return PlayerGameRatings(app.games_by_player[player_name])
 
 
 @app.get("/api/games/")
@@ -80,12 +87,27 @@ def get_player_rating(game: str, player_name: str):
     player_name = player_name.capitalize()
     game = game.capitalize()
     if player_name not in app.games_by_player.keys():
-        raise PlayerNotFoundError(player_name)
+        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
     if game not in app.games_by_player[player_name].keys():
         raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
 
     return app.games_by_player[player_name][game]
+
+@app.patch("/api/players/{player_name}", response_model=PlayerGameRatings)
+def update_player_ratings(
+    player_name: str,
+    updates: Dict[str, int] = Body(...)
+):
+    player_name = player_name.capitalize()
+    if player_name not in app.games_by_player.keys():
+        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
+    
+    player_game_ratings = app.games_by_player[player_name]
+    player_game_ratings.update(updates)
+
+    return PlayerGameRatings(player_game_ratings)
+
 
 
 ### Supporting functions ###
