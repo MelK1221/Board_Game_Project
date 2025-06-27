@@ -2,7 +2,6 @@ import pytest
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
 from Board_Game_App import create_games_by_player, all_games, PlayerNotFoundError, app
-from collections import Counter
 
 ### Setup Test Data ###
 em_games = {
@@ -60,7 +59,7 @@ def test_all_games():
     games = create_games_by_player(games_data)
     res = all_games(games_by_player = games)
     expected_list = ["Boggle", "Hanabi", "Mysterium", "Rivals of Catan", "Codenames", "Settlers of Catan"]
-    assert Counter(res) == Counter(expected_list)
+    assert sorted(res) == sorted(expected_list)
 
 
 ### Test API Get Endpoints ###
@@ -80,8 +79,10 @@ def test_get_player():
         }
     
 def test_get_player_invalid_name():
-    with pytest.raises(PlayerNotFoundError):
-        response = client.get("/api/players/bad")
+    response = client.get("/api/players/bad")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Player Bad not found."}
+
     
 def test_get_games():
     response = client.get("/api/games")

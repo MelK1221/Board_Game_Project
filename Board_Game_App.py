@@ -50,7 +50,7 @@ def get_players():
 def get_player(player_name: str):
     player_name = player_name.capitalize()
     if player_name not in app.games_by_player.keys():
-        raise PlayerNotFoundError(player_name)
+        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
     return app.games_by_player[player_name]
 
