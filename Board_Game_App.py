@@ -94,17 +94,23 @@ def get_player_rating(game: str, player_name: str):
 
     return app.games_by_player[player_name][game]
 
-@app.patch("/api/players/{player_name}", response_model=PlayerGameRatings)
+@app.patch("/api/games/{game}/{player_name}", response_model=PlayerGameRatings)
 def update_player_ratings(
+    game: str,
     player_name: str,
-    updates: Dict[str, int] = Body(...)
+    rating_update: int
 ):
+    game = game.capitalize()
     player_name = player_name.capitalize()
+
     if player_name not in app.games_by_player.keys():
         raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
     
+    if game not in app.games_by_player[player_name].keys():
+        raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+    
     player_game_ratings = app.games_by_player[player_name]
-    player_game_ratings.update(updates)
+    player_game_ratings[game] = rating_update
 
     return PlayerGameRatings(player_game_ratings)
 
