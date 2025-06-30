@@ -114,7 +114,42 @@ def update_player_ratings(
 
     return PlayerGameRatings(player_game_ratings)
 
+@app.post("/api/games/{game}/{player_name}", response_model = PlayerGameRatings)
+def add_game_rating(
+    game: str,
+    player_name: str,
+    new_rating: int
+):
+    game = game.capitalize()
+    player_name = player_name.capitalize()
 
+    if player_name not in app.games_by_player.keys():
+        app.games_by_player[player_name] = {game: new_rating}
+
+    player_game_ratings = app.games_by_player[player_name]
+    player_game_ratings[game] = new_rating
+
+    return PlayerGameRatings(player_game_ratings)
+
+@app.delete("/api/games/{game}/{player_name}", response_model = PlayerGameRatings)
+def delete_game_rating(
+    game: str,
+    player_name: str
+):
+    game = game.capitalize()
+    player_name = player_name.capitalize()
+
+    if player_name not in app.games_by_player.keys():
+        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
+    
+    if game not in app.games_by_player[player_name].keys():
+        raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+    
+    player_game_ratings = app.games_by_player[player_name]
+    deleted_rating = player_game_ratings.pop(game)
+
+
+    return PlayerGameRatings(player_game_ratings)
 
 ### Supporting functions ###
 def parse_players_file(filename, ext) -> list:
