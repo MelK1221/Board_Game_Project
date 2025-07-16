@@ -27,6 +27,16 @@ Bonus idea: Integrate with the BoardGameGeek API to fetch game info automaticall
 brew install postgresql
 brew services start postgresql
 
+# Setup Postgres with application user
+psql postgres
+postgres=# CREATE USER app WITH PASSWORD '[REDACTED]';
+postgres=# ALTER USER app WITH SUPERUSER;
+# Verify user is present and has expected permissions
+postgres=# \du
+
+# Store password [REDACTED] in `password.txt` file
+echo "[REDACTED]" > password.txt
+
 # Install python application
 pip install -r requirements.txt
 ```
@@ -42,6 +52,18 @@ http://localhost:8080/[endpoint]
 ### Stop PostgreSQL Server
 ```
 brew services stop postgresql
+# Check Status
+brew services info postgresql
+```
+
+### Interacting with PostgreSQL
+```
+# Show databases
+postgres=# \list
+# Connect to Database
+postgres=# \c board_games
+# Show tables in DB
+postgres=# \dt
 ```
 
 ### Test the application
