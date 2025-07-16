@@ -23,6 +23,11 @@ Bonus idea: Integrate with the BoardGameGeek API to fetch game info automaticall
 
 ### Installation
 ```
+# Install PostgreSQL (mac OS)
+brew install postgresql
+brew services start postgresql
+
+# Install python application
 pip install -r requirements.txt
 ```
 
@@ -33,6 +38,11 @@ pip install -r requirements.txt
 Then open the UI at the desired endpoint:
 http://localhost:8080/[endpoint]
 
+
+### Stop PostgreSQL Server
+```
+brew services stop postgresql
+```
 
 ### Test the application
 pytest is the testing framework: https://docs.pytest.org/en/stable/getting-started.html#get-started
