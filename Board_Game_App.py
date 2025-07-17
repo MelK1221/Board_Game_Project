@@ -8,12 +8,19 @@ import argparse
 import csv
 import json
 import os
-from typing import Optional
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import create_engine
+from sqlalchemy_utils import database_exists, create_database
+
+DB_USER = "app"
+DB_HOST = "127.0.0.1"
+DB_NAME = "board_games"
+DB_PASSWORD_FILE = "password.txt"
 
 ALL="all"
 
@@ -76,7 +83,6 @@ def get_game_ratings(game: str):
 
 @app.get("/api/games/{game}/{player_name}")
 def get_player_rating(game: str, player_name: str):
-    player_rating = {}
     player_name = player_name.capitalize()
     game = game.capitalize()
     if player_name not in app.games_by_player.keys():
@@ -189,8 +195,25 @@ def print_player_likes(args: argparse.Namespace, games_by_player):
             print(f"All players have rated: {', '.join(list(joint_likes))}")
 
 
+def ensure_game_database():
+    db_password = "melandem"
+    current_dir = Path(__file__).parent
+    password_path = current_dir / "password.txt"
+    db_password: str = ""
+    with password_path.open() as f:
+        db_password = f.read()
+    
+    url = f"postgresql://{DB_USER}:{db_password}@{DB_HOST}/{DB_NAME}"
+    engine = create_engine(url)
+    if not database_exists(engine.url):
+        create_database(engine.url)
+        print(f"Initialized database {DB_NAME}")
+
+
 ### Main application loop ###
 def run(args: argparse.Namespace):
+
+    ensure_game_database()
     players_games_list = []
 
     # Check for existence of path
