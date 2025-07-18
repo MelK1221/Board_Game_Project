@@ -8,21 +8,21 @@ import argparse
 import csv
 import json
 import os
-from typing import Optional, Dict
+from typing import Dict
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 
 ALL="all"
+
 class PlayerEntry(BaseModel):
+    """Pydantic response model for API patch/post/delete methods"""
     name: str
     games: Dict[str, int]
-# class GamesByPlayer(BaseModel):
-#     _games_by_player: Dict[str, Dict]
 
 class PlayerNotFoundError(Exception):
     """Custom exception for player not found."""
@@ -100,6 +100,10 @@ def update_player_ratings(
     player_name: str,
     rating_update: int
 ):
+    """
+    Update rating of existing game in database.
+    Returns dict of player whose game rating was updated.
+    """
     game = game.capitalize()
     player_name = player_name.capitalize()
 
@@ -119,6 +123,10 @@ def add_game_rating(
     player_name: str,
     new_rating: int
 ):
+    """"
+    Create new rated game entry.
+    Returns dict of player new entry added to.
+    """
     game = game.capitalize()
     player_name = player_name.capitalize()
 
@@ -134,6 +142,10 @@ def delete_game_rating(
     game: str,
     player_name: str
 ):
+    """
+    Delete rated game from player entry.
+    Returns dict of player game rating deleted from.
+    """
     game = game.capitalize()
     player_name = player_name.capitalize()
 
