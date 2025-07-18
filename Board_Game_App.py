@@ -210,7 +210,6 @@ def print_player_likes(args: argparse.Namespace, games_by_player):
 
 
 def connect_to_database() -> Engine:
-    db_password = "melandem"
     current_dir = Path(__file__).parent
     password_path = current_dir / "password.txt"
     db_password: str = ""
