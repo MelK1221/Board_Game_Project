@@ -225,8 +225,6 @@ def ensure_game_database(engine: Engine):
     if not database_exists(engine.url):
         create_database(engine.url)
         print(f"Initialized database {DB_NAME}")
-    
-    Base.metadata.create_all(engine)
 
 
 def initialize_ratings_table(engine, games_by_player: dict):
@@ -234,6 +232,9 @@ def initialize_ratings_table(engine, games_by_player: dict):
     Initialize table in db from the `games_by_player` mapping
     games_by_player maps player_name -> {game -> rating}
     """
+    # Ensure table exists
+    Base.metadata.create_all(engine)
+    # Session to add entries to table
     Session = sessionmaker(bind=engine)
     session = Session()
     for player, game_ratings in games_by_player.items():
