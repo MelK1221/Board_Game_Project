@@ -14,16 +14,16 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import RootModel
+from pydantic import BaseModel
 
 
 ALL="all"
+class PlayerEntry(BaseModel):
+    name: str
+    games: Dict[str, int]
+# class GamesByPlayer(BaseModel):
+#     _games_by_player: Dict[str, Dict]
 
-class PlayerGameRatings(RootModel[Dict[str, int]]):
-   pass
-
-class GamesByPlayer(RootModel[Dict[str, PlayerGameRatings]]):
-    pass
 class PlayerNotFoundError(Exception):
     """Custom exception for player not found."""
     def __init__(self, player_name):
@@ -48,18 +48,18 @@ def favicon():
 
 
 ### API endpoints ###
-@app.get("/api/players/", response_model=GamesByPlayer)
+@app.get("/api/players/")
 def get_players():
-    return GamesByPlayer({name: PlayerGameRatings(ratings) for name, ratings in app.games_by_player.items()})
+    return app.games_by_player
 
 
-@app.get("/api/players/{player_name}", response_model=PlayerGameRatings)
+@app.get("/api/players/{player_name}")
 def get_player(player_name: str):
     player_name = player_name.capitalize()
     if player_name not in app.games_by_player.keys():
         raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
-    return PlayerGameRatings(app.games_by_player[player_name])
+    return app.games_by_player[player_name]
 
 
 @app.get("/api/games/")
@@ -94,7 +94,7 @@ def get_player_rating(game: str, player_name: str):
 
     return app.games_by_player[player_name][game]
 
-@app.patch("/api/games/{game}/{player_name}", response_model=PlayerGameRatings)
+@app.patch("/api/games/{game}/{player_name}", response_model = PlayerEntry)
 def update_player_ratings(
     game: str,
     player_name: str,
@@ -109,12 +109,11 @@ def update_player_ratings(
     if game not in app.games_by_player[player_name].keys():
         raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
     
-    player_game_ratings = app.games_by_player[player_name]
-    player_game_ratings[game] = rating_update
+    app.games_by_player[player_name][game] = rating_update
 
-    return PlayerGameRatings(player_game_ratings)
+    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
-@app.post("/api/games/{game}/{player_name}", response_model = PlayerGameRatings)
+@app.post("/api/games/{game}/{player_name}", response_model = PlayerEntry)
 def add_game_rating(
     game: str,
     player_name: str,
@@ -126,12 +125,11 @@ def add_game_rating(
     if player_name not in app.games_by_player.keys():
         app.games_by_player[player_name] = {game: new_rating}
 
-    player_game_ratings = app.games_by_player[player_name]
-    player_game_ratings[game] = new_rating
+    app.games_by_player[player_name][game] = new_rating
 
-    return PlayerGameRatings(player_game_ratings)
+    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
-@app.delete("/api/games/{game}/{player_name}", response_model = PlayerGameRatings)
+@app.delete("/api/games/{game}/{player_name}", response_model = PlayerEntry)
 def delete_game_rating(
     game: str,
     player_name: str
@@ -145,11 +143,10 @@ def delete_game_rating(
     if game not in app.games_by_player[player_name].keys():
         raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
     
-    player_game_ratings = app.games_by_player[player_name]
-    deleted_rating = player_game_ratings.pop(game)
+    deleted_rating = app.games_by_player[player_name].pop(game)
 
 
-    return PlayerGameRatings(player_game_ratings)
+    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
 ### Supporting functions ###
 def parse_players_file(filename, ext) -> list:
