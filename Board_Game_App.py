@@ -95,7 +95,7 @@ def get_player_rating(game: str, player_name: str):
     return app.games_by_player[player_name][game]
 
 @app.patch("/api/games/{game}/{player_name}", response_model = PlayerEntry)
-def update_player_ratings(
+def update_player_rating(
     game: str,
     player_name: str,
     rating_update: int
