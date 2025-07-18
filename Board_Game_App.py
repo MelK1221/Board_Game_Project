@@ -36,7 +36,7 @@ class PlayerNotFoundError(Exception):
 Base = declarative_base()
 
 # Define table schema
-class Ratings(Base):
+class Rating(Base):
     __tablename__ = "ratings"
 
     id = Column(Integer, primary_key=True)
@@ -230,6 +230,20 @@ def ensure_game_database(engine: Engine):
     Base.metadata.create_all(engine)
 
 
+def initialize_ratings_table(engine, games_by_player: dict):
+    """
+    Initialize table in db from the `games_by_player` mapping
+    games_by_player maps player_name -> {game -> rating}
+    """
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    for player, game_ratings in games_by_player.items():
+        for game, value in game_ratings.items():
+            rating = Rating(name=player, game=game, rating=value)
+            session.add(rating)
+
+    session.commit()
+
 ### Main application loop ###
 def run(args: argparse.Namespace):
 
@@ -263,6 +277,8 @@ def run(args: argparse.Namespace):
         app.all_player_games = all_player_games
         # Database connection
         app.engine = engine
+
+        initialize_ratings_table(engine, games_by_player)
 
         # Start server
         uvicorn.run(app, host="localhost", port=args.port)

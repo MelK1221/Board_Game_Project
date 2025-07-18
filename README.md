@@ -66,6 +66,8 @@ postgres=# \c board_games
 postgres=# \dt
 # Describe the 'ratings' table
 board_games=# \d ratings
+# See all current entries
+board_games=# SELECT * FROM ratings;
 ```
 
 ### Test the application
