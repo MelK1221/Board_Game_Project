@@ -14,8 +14,9 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 DB_USER = "app"
 DB_HOST = "127.0.0.1"
@@ -31,13 +32,26 @@ class PlayerNotFoundError(Exception):
         self.message = f"Player {self.player_name} not found."
         super().__init__(self.message)
 
+### DB ###
+Base = declarative_base()
+
+# Define table schema
+class Ratings(Base):
+    __tablename__ = "ratings"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    game = Column(String, nullable=False)
+    rating = Column(Integer, nullable=False)
+
+
+### Fast API Application ###
 app = FastAPI(
     title="Board Games API",
     summary="Kukura Family & Friends Board Game Ratings",
     version="1",
     servers=[{"url": "/"}],
 )
-
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -208,6 +222,8 @@ def ensure_game_database():
     if not database_exists(engine.url):
         create_database(engine.url)
         print(f"Initialized database {DB_NAME}")
+    
+    Base.metadata.create_all(engine)
 
 
 ### Main application loop ###

@@ -64,6 +64,8 @@ postgres=# \list
 postgres=# \c board_games
 # Show tables in DB
 postgres=# \dt
+# Describe the 'ratings' table
+board_games=# \d ratings
 ```
 
 ### Test the application
