@@ -14,7 +14,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Engine, Column, Integer, String
 from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -209,16 +209,20 @@ def print_player_likes(args: argparse.Namespace, games_by_player):
             print(f"All players have rated: {', '.join(list(joint_likes))}")
 
 
-def ensure_game_database():
+def connect_to_database() -> Engine:
     db_password = "melandem"
     current_dir = Path(__file__).parent
     password_path = current_dir / "password.txt"
     db_password: str = ""
     with password_path.open() as f:
-        db_password = f.read()
-    
+        db_password = f.read()  
+
     url = f"postgresql://{DB_USER}:{db_password}@{DB_HOST}/{DB_NAME}"
     engine = create_engine(url)
+    return engine
+
+
+def ensure_game_database(engine: Engine):
     if not database_exists(engine.url):
         create_database(engine.url)
         print(f"Initialized database {DB_NAME}")
@@ -229,7 +233,9 @@ def ensure_game_database():
 ### Main application loop ###
 def run(args: argparse.Namespace):
 
-    ensure_game_database()
+    engine = connect_to_database()
+    ensure_game_database(engine)
+
     players_games_list = []
 
     # Check for existence of path
@@ -255,6 +261,8 @@ def run(args: argparse.Namespace):
         app.games_by_player = games_by_player
         # List of all unique games that have been rated by players
         app.all_player_games = all_player_games
+        # Database connection
+        app.engine = engine
 
         # Start server
         uvicorn.run(app, host="localhost", port=args.port)
