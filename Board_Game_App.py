@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, Engine, Column, Integer, String, UniqueConstraint
 from sqlalchemy_utils import database_exists, create_database
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.exc import IntegrityError
 
 DB_USER = "app"
@@ -238,24 +238,23 @@ def initialize_ratings_table(engine, games_by_player: dict):
     """
     # Ensure table exists
     Base.metadata.create_all(engine)
-    # Session to add entries to table
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    for player, game_ratings in games_by_player.items():
-        for game, value in game_ratings.items():
-            rating = Rating(name=player, game=game, rating=value)
-            session.add(rating)
 
-    try:
-        session.commit()
-    except IntegrityError as e:
-        print(f"Commit failed: {e}")
+    with Session(engine) as session:
+        # Add entries to table
+        for player, game_ratings in games_by_player.items():
+            for game, value in game_ratings.items():
+                rating = Rating(name=player, game=game, rating=value)
+                session.add(rating)
+
+        try:
+            session.commit()
+        except IntegrityError as e:
+            print(f"Commit failed: {e}")
 
 
 ### Main application loop ###
-def run(args: argparse.Namespace):
+def run(engine: Engine, args: argparse.Namespace):
 
-    engine = connect_to_database()
     ensure_game_database(engine)
 
     players_games_list = []
@@ -291,6 +290,15 @@ def run(args: argparse.Namespace):
         # Start server
         uvicorn.run(app, host="localhost", port=args.port)
 
+
+
+def shutdown(engine: Engine):
+    with Session(engine) as session:
+        # Clear out table entries on shutdown.
+        session.query(Rating).delete()
+        session.commit()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
@@ -307,8 +315,10 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_args()
-    
+    engine = connect_to_database()
     try:
-        run(args)
+        run(engine, args)
     except (FileNotFoundError, PlayerNotFoundError, ValueError) as e:
         print(e)
+    finally:
+        shutdown(engine)
