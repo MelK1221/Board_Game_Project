@@ -68,6 +68,8 @@ postgres=# \dt
 board_games=# \d ratings
 # See all current entries
 board_games=# SELECT * FROM ratings;
+# Drop table manually
+board_games=# DROP TABLE ratings;
 ```
 
 ### Test the application

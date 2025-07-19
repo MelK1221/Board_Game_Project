@@ -14,9 +14,10 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine, Engine, Column, Integer, String
+from sqlalchemy import create_engine, Engine, Column, Integer, String, UniqueConstraint
 from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.exc import IntegrityError
 
 DB_USER = "app"
 DB_HOST = "127.0.0.1"
@@ -44,6 +45,9 @@ class Rating(Base):
     game = Column(String, nullable=False)
     rating = Column(Integer, nullable=False)
 
+    __table_args__ = (
+        UniqueConstraint("name", "game", name="name-and-game"),
+    )
 
 ### Fast API Application ###
 app = FastAPI(
@@ -242,7 +246,11 @@ def initialize_ratings_table(engine, games_by_player: dict):
             rating = Rating(name=player, game=game, rating=value)
             session.add(rating)
 
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError as e:
+        print(f"Commit failed: {e}")
+
 
 ### Main application loop ###
 def run(args: argparse.Namespace):
