@@ -218,19 +218,6 @@ def create_games_by_player(players_games_list):
     return games_by_player
 
 
-def all_games(games_by_player: dict[str, list]):
-    """
-    Create list of all games rated.
-    """
-    
-    all_games = []
-    for player in games_by_player.keys():
-        player_game_list = list(games_by_player[player].keys())
-        all_games = list(set(all_games + player_game_list))
-    
-    return all_games
-
-
 def print_player_likes(args: argparse.Namespace, games_by_player):
     """
     Print the players and their favorite games.
@@ -296,7 +283,6 @@ def run(engine: Engine, args: argparse.Namespace):
     
     # Create different maps for endpoint access
     games_by_player = create_games_by_player(players_games_list)
-    all_player_games = all_games(games_by_player)
 
     if args.player:
         print_player_likes(args, games_by_player)
