@@ -112,6 +112,46 @@ def get_player_rating(game: str, player_name: str):
     return app.games_by_player[player_name][game]
 
 
+### Database Methods ###
+def connect_to_database() -> Engine:
+    current_dir = Path(__file__).parent
+    password_path = current_dir / "password.txt"
+    db_password: str = ""
+    with password_path.open() as f:
+        db_password = f.read()  
+
+    url = f"postgresql://{DB_USER}:{db_password}@{DB_HOST}/{DB_NAME}"
+    engine = create_engine(url)
+    return engine
+
+
+def ensure_game_database(engine: Engine):
+    if not database_exists(engine.url):
+        create_database(engine.url)
+        print(f"Initialized database {DB_NAME}")
+
+
+def initialize_ratings_table(engine, games_by_player: dict):
+    """
+    Initialize table in db from the `games_by_player` mapping
+    games_by_player maps player_name -> {game -> rating}
+    """
+    # Ensure table exists
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        # Add entries to table
+        for player, game_ratings in games_by_player.items():
+            for game, value in game_ratings.items():
+                rating = Rating(name=player, game=game, rating=value)
+                session.add(rating)
+
+        try:
+            session.commit()
+        except IntegrityError as e:
+            print(f"Commit failed: {e}")
+
+
 ### Supporting functions ###
 def parse_players_file(filename, ext) -> list:
     """
@@ -213,45 +253,6 @@ def print_player_likes(args: argparse.Namespace, games_by_player):
             print(f"All players have rated: {', '.join(list(joint_likes))}")
 
 
-def connect_to_database() -> Engine:
-    current_dir = Path(__file__).parent
-    password_path = current_dir / "password.txt"
-    db_password: str = ""
-    with password_path.open() as f:
-        db_password = f.read()  
-
-    url = f"postgresql://{DB_USER}:{db_password}@{DB_HOST}/{DB_NAME}"
-    engine = create_engine(url)
-    return engine
-
-
-def ensure_game_database(engine: Engine):
-    if not database_exists(engine.url):
-        create_database(engine.url)
-        print(f"Initialized database {DB_NAME}")
-
-
-def initialize_ratings_table(engine, games_by_player: dict):
-    """
-    Initialize table in db from the `games_by_player` mapping
-    games_by_player maps player_name -> {game -> rating}
-    """
-    # Ensure table exists
-    Base.metadata.create_all(engine)
-
-    with Session(engine) as session:
-        # Add entries to table
-        for player, game_ratings in games_by_player.items():
-            for game, value in game_ratings.items():
-                rating = Rating(name=player, game=game, rating=value)
-                session.add(rating)
-
-        try:
-            session.commit()
-        except IntegrityError as e:
-            print(f"Commit failed: {e}")
-
-
 ### Main application loop ###
 def run(engine: Engine, args: argparse.Namespace):
 
@@ -289,7 +290,6 @@ def run(engine: Engine, args: argparse.Namespace):
 
         # Start server
         uvicorn.run(app, host="localhost", port=args.port)
-
 
 
 def shutdown(engine: Engine):
