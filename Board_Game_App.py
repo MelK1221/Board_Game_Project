@@ -80,7 +80,7 @@ def get_player_rating(game: str, player_name: str):
     player_name = player_name.capitalize()
     game = game.capitalize()
     if player_name not in app.games_by_player.keys():
-        raise PlayerNotFoundError(player_name)
+        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
     if game not in app.games_by_player[player_name].keys():
         raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
