@@ -8,6 +8,7 @@ import argparse
 import csv
 import json
 import os
+from collections import defaultdict
 from pathlib import Path
 
 import uvicorn
@@ -41,12 +42,12 @@ class Rating(Base):
     __tablename__ = "ratings"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
+    player = Column(String, nullable=False)
     game = Column(String, nullable=False)
     rating = Column(Integer, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("name", "game", name="name-and-game"),
+        UniqueConstraint("player", "game", name="player-and-game"),
     )
 
 ### Fast API Application ###
@@ -68,33 +69,52 @@ def favicon():
 ### API endpoints ###
 @app.get("/api/players/")
 def get_players():
-    return app.games_by_player
+    games_by_player = defaultdict(dict)
+    with Session(app.engine) as session:
+        ratings = session.query(Rating).all()
+        for rating in ratings:
+            games_by_player[rating.player].update({rating.game: rating.rating})
+
+    return games_by_player
 
 
 @app.get("/api/players/{player_name}")
 def get_player(player_name: str):
+    player_to_ratings = {}
     player_name = player_name.capitalize()
-    if player_name not in app.games_by_player.keys():
-        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
+    with Session(app.engine) as session:  
+        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+        if not player_ratings:
+            raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
+        
+        for rating in player_ratings:
+            player_to_ratings[rating.game] = rating.rating
 
-    return app.games_by_player[player_name]
+    return player_to_ratings
 
 
 @app.get("/api/games/")
 def get_games():
-    return app.all_player_games
+    games = []
+    with Session(app.engine) as session:
+        game_results = session.query(Rating.game).distinct().all()
+        games = [game[0] for game in game_results]
+
+    return games
 
 
 @app.get("/api/games/{game}")
 def get_game_ratings(game: str):
     game = game.capitalize()
     player_ratings = {}
-    if game not in app.all_player_games:
-        raise HTTPException(status_code=404, detail=f"Game {game} not found.")
 
-    for name, game_ratings in app.games_by_player.items():
-        if game in game_ratings.keys():
-            player_ratings[name] = game_ratings[game]
+    with Session(app.engine) as session:  
+        game_ratings = session.query(Rating).filter_by(game=game).all()
+        if not game_ratings:
+            raise HTTPException(status_code=404, detail=f"Game {game} not found.")
+
+        for rating in game_ratings:
+            player_ratings[rating.player] = rating.rating
 
     return player_ratings
 
@@ -103,13 +123,15 @@ def get_game_ratings(game: str):
 def get_player_rating(game: str, player_name: str):
     player_name = player_name.capitalize()
     game = game.capitalize()
-    if player_name not in app.games_by_player.keys():
-        raise PlayerNotFoundError(player_name)
+    rating = None
+    with Session(app.engine) as session:  
+        ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
+        if not ratings:
+            raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
 
-    if game not in app.games_by_player[player_name].keys():
-        raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+        rating = ratings[0].rating
 
-    return app.games_by_player[player_name][game]
+    return rating
 
 
 ### Database Methods ###
@@ -143,7 +165,7 @@ def initialize_ratings_table(engine, games_by_player: dict):
         # Add entries to table
         for player, game_ratings in games_by_player.items():
             for game, value in game_ratings.items():
-                rating = Rating(name=player, game=game, rating=value)
+                rating = Rating(player=player, game=game, rating=value)
                 session.add(rating)
 
         try:
@@ -279,10 +301,6 @@ def run(engine: Engine, args: argparse.Namespace):
     if args.player:
         print_player_likes(args, games_by_player)
     else:
-        # Maps a player to a dict of the games they have rated
-        app.games_by_player = games_by_player
-        # List of all unique games that have been rated by players
-        app.all_player_games = all_player_games
         # Database connection
         app.engine = engine
 
