@@ -117,7 +117,7 @@ def update_player_rating(
 
     return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
-@app.post("/api/games/{game}/{player_name}", response_model = PlayerEntry)
+@app.post("/api/games/{game}/{player_name}", response_model = PlayerEntry, status_code=201)
 def add_game_rating(
     game: str,
     player_name: str,
@@ -130,10 +130,14 @@ def add_game_rating(
     game = game.capitalize()
     player_name = player_name.capitalize()
 
-    if player_name not in app.games_by_player.keys():
+    if player_name in app.games_by_player.keys():
+        if game in app.games_by_player[player_name]:
+            raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}")
+        else:
+            app.games_by_player[player_name][game] = new_rating
+    else:
         app.games_by_player[player_name] = {game: new_rating}
 
-    app.games_by_player[player_name][game] = new_rating
 
     return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
