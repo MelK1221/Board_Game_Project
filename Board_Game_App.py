@@ -11,7 +11,7 @@ import os
 from typing import Dict
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -21,9 +21,11 @@ ALL="all"
 
 class PlayerEntry(BaseModel):
     """Pydantic response model for API patch/post/delete methods"""
-    name: str
-    games: Dict[str, int]
+    Name: str
+    Games: Dict[str, int]
 
+class RatingUpdateRequest(BaseModel):
+    rating_update: int
 class PlayerNotFoundError(Exception):
     """Custom exception for player not found."""
     def __init__(self, player_name):
@@ -98,7 +100,7 @@ def get_player_rating(game: str, player_name: str):
 def update_player_rating(
     game: str,
     player_name: str,
-    rating_update: int
+    rating: RatingUpdateRequest = Body(...)
 ):
     """
     Update rating of existing game in database.
@@ -113,15 +115,15 @@ def update_player_rating(
     if game not in app.games_by_player[player_name].keys():
         raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
     
-    app.games_by_player[player_name][game] = rating_update
+    app.games_by_player[player_name][game] = rating.rating_update
 
-    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
+    return PlayerEntry(Name=player_name, Games=app.games_by_player[player_name])
 
 @app.post("/api/games/{game}/{player_name}", response_model = PlayerEntry, status_code=201)
 def add_game_rating(
     game: str,
     player_name: str,
-    new_rating: int
+    rating: RatingUpdateRequest = Body(...)
 ):
     """"
     Create new rated game entry.
@@ -132,14 +134,14 @@ def add_game_rating(
 
     if player_name in app.games_by_player.keys():
         if game in app.games_by_player[player_name]:
-            raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}")
+            raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}.")
         else:
-            app.games_by_player[player_name][game] = new_rating
+            app.games_by_player[player_name][game] = rating.rating_update
     else:
-        app.games_by_player[player_name] = {game: new_rating}
+        app.games_by_player[player_name] = {game: rating.rating_update}
 
 
-    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
+    return PlayerEntry(Name=player_name, Games=app.games_by_player[player_name])
 
 @app.delete("/api/games/{game}/{player_name}", response_model = PlayerEntry)
 def delete_game_rating(
@@ -162,7 +164,7 @@ def delete_game_rating(
     deleted_rating = app.games_by_player[player_name].pop(game)
 
 
-    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
+    return PlayerEntry(Name=player_name, Games=app.games_by_player[player_name])
 
 ### Supporting functions ###
 def parse_players_file(filename, ext) -> list:

@@ -108,7 +108,7 @@ class Test_API_Players_Path:
         assert response.status_code == 404
         assert response.json() == {"detail": "Player Bad not found."}
 
-class Test_API_Games_Path():
+class Test_API_Games_Path:
     
     @classmethod
     def setup_class(cls):
@@ -152,3 +152,85 @@ class Test_API_Games_Path():
         assert response.status_code == 404
         assert response.json() == {"detail": "Game Zelda not rated by Em."}
   
+
+  # Test patch/post/delete methods
+class Test_API_Rating_Mods:
+    @classmethod
+    def setup_class(cls):
+        cls.client = start_application()
+
+    @classmethod
+    def teardown_class(cls):
+        cls.client.close()
+
+    def setup_method(self, method):
+        self.games_data, self.games_by_player, self.all_player_games = sample_data_setup()
+
+    # ============ Test Patch Methods =============
+    def test_patch_valid_update(self):
+        response = self.client.patch("/api/games/hanabi/mel", json={"rating_update": 4})
+        assert response.status_code == 200
+        assert response.json()["Name"] == "Mel"
+        assert response.json()["Games"] == {
+            "Codenames": 8,
+            "Hanabi": 4,
+            "Mysterium": 7,
+            "Settlers of Catan": 6
+        }
+
+    def test_patch_invalid_name(self):
+        response = self.client.patch("/api/games/hanabi/bad", json={"rating_update": 4})
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Player Bad not found."}
+
+    def test_patch_invalid_game(self):
+        response = self.client.patch("/api/games/bad/mel", json={"rating_update": 4})
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Game Bad not rated by Mel."}
+
+    # ============ Test Post Methods =============
+    def test_post_game_added(self):
+        response = self.client.post("/api/games/new_game/em", json={"rating_update": 5})
+        assert response.status_code == 201
+        assert response.json()["Name"] == "Em"
+        assert response.json()["Games"] == {
+            "Boggle": 7,
+            "Hanabi": 6,
+            "Mysterium": 9,
+            "Rivals of Catan": 8,
+            "New_game": 5
+        }
+    
+    def test_post_player_added(self):
+        response = self.client.post("/api/games/hanabi/new_player", json={"rating_update": 5})
+        assert response.status_code == 201
+        assert response.json()["Name"] == "New_player"
+        assert response.json()["Games"] == {
+            "Hanabi": 5
+        }
+
+    def test_post_entry_exists(self):
+        response = self.client.post("/api/games/hanabi/em", json={"rating_update": 5})
+        assert response.status_code == 409
+        assert response.json() == {"detail": "Game Hanabi has already been rated by Em."}
+
+    # ============ Test Delete Methods =============
+    def test_delete_valid_entry(self):
+        response = self.client.delete("/api/games/hanabi/mel")
+        assert response.status_code == 200
+        assert response.json()["Name"] == "Mel"
+        assert response.json()["Games"] == {
+            "Codenames": 8,
+            "Mysterium": 7,
+            "Settlers of Catan": 6
+        }
+
+    def test_delete_invalid_game(self):
+        response = self.client.delete("/api/games/bad/mel")
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Game Bad not rated by Mel."}
+
+    def test_delete_invalid_name(self):
+        response = self.client.delete("/api/games/hanabi/bad")
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Player Bad not found."}
