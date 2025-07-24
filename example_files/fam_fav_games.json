@@ -1,7 +1,7 @@
 [
    {
-      "Name": "Em",
-      "Games": {
+      "name": "Em",
+      "games": {
          "Boggle": 7,
          "Hanabi": 6,
          "Mysterium": 9,
@@ -9,8 +9,8 @@
       }
    },
    {
-      "Name": "Mel",
-      "Games": {
+      "name": "Mel",
+      "games": {
          "Codenames": 8,
          "Hanabi": 8,
          "Mysterium": 7,
@@ -18,8 +18,8 @@
       }
    },
    {
-      "Name": "Sarah",
-      "Games": {
+      "name": "Sarah",
+      "games": {
          "Hanabi": 10,
          "Herd Mentality": 8,
          "Mysterium": 9,
@@ -27,16 +27,16 @@
       }
    },
    {
-      "Name": "Mike",
-      "Games": {
+      "name": "Mike",
+      "games": {
          "Stratego": 8,
          "Risk": 9,
          "Monopoly": 5
       }
    },
    {
-      "Name": "Laurie",
-      "Games": {
+      "name": "Laurie",
+      "games": {
          "Codenames": 6,
          "Boggle": 7,
          "Rummy": 10
