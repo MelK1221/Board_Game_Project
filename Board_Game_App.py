@@ -21,11 +21,11 @@ ALL="all"
 
 class PlayerEntry(BaseModel):
     """Pydantic response model for API patch/post/delete methods"""
-    Name: str
-    Games: Dict[str, int]
+    name: str
+    games: Dict[str, int]
 
-class RatingUpdateRequest(BaseModel):
-    rating_update: int
+# class RatingUpdateRequest(BaseModel):
+#     rating_update: int
 class PlayerNotFoundError(Exception):
     """Custom exception for player not found."""
     def __init__(self, player_name):
@@ -100,7 +100,7 @@ def get_player_rating(game: str, player_name: str):
 def update_player_rating(
     game: str,
     player_name: str,
-    rating: RatingUpdateRequest = Body(...)
+    rating: int
 ):
     """
     Update rating of existing game in database.
@@ -115,15 +115,15 @@ def update_player_rating(
     if game not in app.games_by_player[player_name].keys():
         raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
     
-    app.games_by_player[player_name][game] = rating.rating_update
+    app.games_by_player[player_name][game] = rating
 
-    return PlayerEntry(Name=player_name, Games=app.games_by_player[player_name])
+    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
 @app.post("/api/games/{game}/{player_name}", response_model = PlayerEntry, status_code=201)
 def add_game_rating(
     game: str,
     player_name: str,
-    rating: RatingUpdateRequest = Body(...)
+    rating: int
 ):
     """"
     Create new rated game entry.
@@ -136,12 +136,12 @@ def add_game_rating(
         if game in app.games_by_player[player_name]:
             raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}.")
         else:
-            app.games_by_player[player_name][game] = rating.rating_update
+            app.games_by_player[player_name][game] = rating
     else:
-        app.games_by_player[player_name] = {game: rating.rating_update}
+        app.games_by_player[player_name] = {game: rating}
 
 
-    return PlayerEntry(Name=player_name, Games=app.games_by_player[player_name])
+    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
 @app.delete("/api/games/{game}/{player_name}", response_model = PlayerEntry)
 def delete_game_rating(
@@ -164,7 +164,7 @@ def delete_game_rating(
     deleted_rating = app.games_by_player[player_name].pop(game)
 
 
-    return PlayerEntry(Name=player_name, Games=app.games_by_player[player_name])
+    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
 ### Supporting functions ###
 def parse_players_file(filename, ext) -> list:
@@ -190,8 +190,8 @@ def parse_players_file(filename, ext) -> list:
             players_list = json.load(upload_file)
 
         for person_dict in players_list:
-            person_dict["Name"] = person_dict["Name"].capitalize()
-            person_dict["Games"] = {game.capitalize(): rating for game, rating in person_dict["Games"].items()}
+            person_dict["name"] = person_dict["name"].capitalize()
+            person_dict["games"] = {game.capitalize(): rating for game, rating in person_dict["games"].items()}
             players_games_list.append(person_dict)
             
         return players_games_list
@@ -205,7 +205,7 @@ def create_games_by_player(players_games_list):
     
     games_by_player = {}
     for player in players_games_list:
-        games_by_player[player["Name"]] = player["Games"]
+        games_by_player[player["name"]] = player["games"]
     
     return games_by_player
 

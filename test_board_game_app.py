@@ -24,12 +24,12 @@ def sample_data_setup():
 
     games_data = [
         {
-            "Name": "Em",
-            "Games": em_games
+            "name": "Em",
+            "games": em_games
         },
         {
-            "Name": "Mel",
-            "Games": mel_games
+            "name": "Mel",
+            "games": mel_games
         }
     ]
     games_by_player = create_games_by_player(games_data)
@@ -47,7 +47,7 @@ def start_application():
 
 
 ### Test Supporting Funtions ###
-class Test_Supporting_Funcs:
+class TestSupportingFuncs:
 
     def setup_method(self, method):
         self.games_data, self.games_by_player, self.all_player_games = sample_data_setup()
@@ -77,7 +77,7 @@ class Test_Supporting_Funcs:
 
 
 ### Test API Get Endpoints ###
-class Test_API_Players_Path:
+class TestAPIPlayersPath:
     
     @classmethod
     def setup_class(cls):
@@ -108,7 +108,7 @@ class Test_API_Players_Path:
         assert response.status_code == 404
         assert response.json() == {"detail": "Player Bad not found."}
 
-class Test_API_Games_Path:
+class TestAPIGamesPath:
     
     @classmethod
     def setup_class(cls):
@@ -154,7 +154,7 @@ class Test_API_Games_Path:
   
 
   # Test patch/post/delete methods
-class Test_API_Rating_Mods:
+class TestAPIRatingMods:
     @classmethod
     def setup_class(cls):
         cls.client = start_application()
@@ -165,13 +165,15 @@ class Test_API_Rating_Mods:
 
     def setup_method(self, method):
         self.games_data, self.games_by_player, self.all_player_games = sample_data_setup()
+        app.games_by_player = self.games_by_player
+        app.all_player_games = self.all_player_games
 
     # ============ Test Patch Methods =============
     def test_patch_valid_update(self):
-        response = self.client.patch("/api/games/hanabi/mel", json={"rating_update": 4})
+        response = self.client.patch("/api/games/hanabi/mel?rating=4")
         assert response.status_code == 200
-        assert response.json()["Name"] == "Mel"
-        assert response.json()["Games"] == {
+        assert response.json()["name"] == "Mel"
+        assert response.json()["games"] == {
             "Codenames": 8,
             "Hanabi": 4,
             "Mysterium": 7,
@@ -179,21 +181,21 @@ class Test_API_Rating_Mods:
         }
 
     def test_patch_invalid_name(self):
-        response = self.client.patch("/api/games/hanabi/bad", json={"rating_update": 4})
+        response = self.client.patch("/api/games/hanabi/bad?rating=4")
         assert response.status_code == 404
         assert response.json() == {"detail": "Player Bad not found."}
 
     def test_patch_invalid_game(self):
-        response = self.client.patch("/api/games/bad/mel", json={"rating_update": 4})
+        response = self.client.patch("/api/games/bad/mel?rating=4")
         assert response.status_code == 404
         assert response.json() == {"detail": "Game Bad not rated by Mel."}
 
     # ============ Test Post Methods =============
     def test_post_game_added(self):
-        response = self.client.post("/api/games/new_game/em", json={"rating_update": 5})
+        response = self.client.post("/api/games/new_game/em?rating=5")
         assert response.status_code == 201
-        assert response.json()["Name"] == "Em"
-        assert response.json()["Games"] == {
+        assert response.json()["name"] == "Em"
+        assert response.json()["games"] == {
             "Boggle": 7,
             "Hanabi": 6,
             "Mysterium": 9,
@@ -202,15 +204,15 @@ class Test_API_Rating_Mods:
         }
     
     def test_post_player_added(self):
-        response = self.client.post("/api/games/hanabi/new_player", json={"rating_update": 5})
+        response = self.client.post("/api/games/hanabi/new_player?rating=5")
         assert response.status_code == 201
-        assert response.json()["Name"] == "New_player"
-        assert response.json()["Games"] == {
+        assert response.json()["name"] == "New_player"
+        assert response.json()["games"] == {
             "Hanabi": 5
         }
 
     def test_post_entry_exists(self):
-        response = self.client.post("/api/games/hanabi/em", json={"rating_update": 5})
+        response = self.client.post("/api/games/hanabi/em?rating=5")
         assert response.status_code == 409
         assert response.json() == {"detail": "Game Hanabi has already been rated by Em."}
 
@@ -218,8 +220,8 @@ class Test_API_Rating_Mods:
     def test_delete_valid_entry(self):
         response = self.client.delete("/api/games/hanabi/mel")
         assert response.status_code == 200
-        assert response.json()["Name"] == "Mel"
-        assert response.json()["Games"] == {
+        assert response.json()["name"] == "Mel"
+        assert response.json()["games"] == {
             "Codenames": 8,
             "Mysterium": 7,
             "Settlers of Catan": 6
