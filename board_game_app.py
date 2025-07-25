@@ -11,7 +11,7 @@ import os
 from typing import Dict
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -24,6 +24,8 @@ class PlayerEntry(BaseModel):
     name: str
     games: Dict[str, int]
 
+# class RatingUpdateRequest(BaseModel):
+#     rating_update: int
 class PlayerNotFoundError(Exception):
     """Custom exception for player not found."""
     def __init__(self, player_name):
@@ -98,7 +100,7 @@ def get_player_rating(game: str, player_name: str):
 def update_player_rating(
     game: str,
     player_name: str,
-    rating_update: int
+    rating: int
 ):
     """
     Update rating of existing game in database.
@@ -113,7 +115,7 @@ def update_player_rating(
     if game not in app.games_by_player[player_name].keys():
         raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
     
-    app.games_by_player[player_name][game] = rating_update
+    app.games_by_player[player_name][game] = rating
 
     return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
@@ -121,7 +123,7 @@ def update_player_rating(
 def add_game_rating(
     game: str,
     player_name: str,
-    new_rating: int
+    rating: int
 ):
     """"
     Create new rated game entry.
@@ -132,11 +134,11 @@ def add_game_rating(
 
     if player_name in app.games_by_player.keys():
         if game in app.games_by_player[player_name]:
-            raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}")
+            raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}.")
         else:
-            app.games_by_player[player_name][game] = new_rating
+            app.games_by_player[player_name][game] = rating
     else:
-        app.games_by_player[player_name] = {game: new_rating}
+        app.games_by_player[player_name] = {game: rating}
 
 
     return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
@@ -188,8 +190,8 @@ def parse_players_file(filename, ext) -> list:
             players_list = json.load(upload_file)
 
         for person_dict in players_list:
-            person_dict["Name"] = person_dict["Name"].capitalize()
-            person_dict["Games"] = {game.capitalize(): rating for game, rating in person_dict["Games"].items()}
+            person_dict["name"] = person_dict["name"].capitalize()
+            person_dict["games"] = {game.capitalize(): rating for game, rating in person_dict["games"].items()}
             players_games_list.append(person_dict)
             
         return players_games_list
@@ -203,7 +205,7 @@ def create_games_by_player(players_games_list):
     
     games_by_player = {}
     for player in players_games_list:
-        games_by_player[player["Name"]] = player["Games"]
+        games_by_player[player["name"]] = player["games"]
     
     return games_by_player
 
