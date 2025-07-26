@@ -1,11 +1,10 @@
 from sqlalchemy import Engine
-from sqlalchemy.orm import Session
 
 from fastapi.testclient import TestClient
 from pytest import mark
 from unittest.mock import patch, MagicMock
 
-from board_game_app import create_games_by_player, app
+from board_game_app import add_ratings, create_games_by_player, app, Rating
 
 
 ### Setup Test Data ###
@@ -48,6 +47,50 @@ def start_application():
     return client
 
 
+# TODO: either remove inheriting from MagicMock, or else use MagicMock's functionality
+
+# Mocks the result of a session query / filter operation
+class MockQueryResult:
+
+    def __init__(self, results: list):
+        self.results = results
+    
+    def filter_by(self, **kwargs):
+        filtered = []
+        for item in self.results:
+            matches = True
+            for k, v in kwargs.items():
+                if getattr(matches, k) != v:
+                    matches = False
+                    break
+
+            if matches:
+                filtered.append(item)
+
+    def all(self):
+        return self.results
+
+
+class MockSession(MagicMock):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.entries = []
+    
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+    
+    def add(self, entry):
+        self.entries.append(entry)
+
+    def query(self, T):
+        entries_type_T = list(filter(lambda x: isinstance(x, T), self.entries))
+        return MockQueryResult(entries_type_T)
+
+
 ### Test Supporting Funtions ###
 class TestSupportingFuncs:
 
@@ -77,13 +120,11 @@ class TestAPIPlayersPath:
     
     @classmethod
     def setup_class(cls):
-        cls.mock_session = MagicMock(spec=Session)
+        cls.mock_session = MockSession()
         cls.client = start_application()
         # TODO: is 'games_data' needed?
         cls.games_data, cls.games_by_player = sample_data_setup()
-        # TODO: pass 'games_by_player' to 'add_ratings' - add ratings should add to a fake DB of some kind
-        # then have return value here get from the fake DB
-        cls.mock_session.query.return_value.all.return_value = cls.games_by_player
+        add_ratings(cls.games_by_player, cls.mock_session)
     
     @classmethod
     def teardown_class(cls):
@@ -91,8 +132,7 @@ class TestAPIPlayersPath:
 
     @patch("board_game_app.Session")
     def test_get_players(self, mock_session_class):
-        mock_session_class.return_value.__enter__.return_value = self.mock_session
-
+        mock_session_class.return_value = self.mock_session
         response = self.client.get("/api/players")
         assert response.status_code == 200
         assert response.json() == self.games_by_player
