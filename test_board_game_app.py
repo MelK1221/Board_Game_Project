@@ -39,7 +39,7 @@ def sample_data_setup():
     ]
     games_by_player = create_games_by_player(games_data)
 
-    return games_data, games_by_player
+    return games_by_player
 
 def start_application():
     app.engine = MagicMock(spec=Engine)
@@ -103,7 +103,7 @@ class MockSession():
 class TestSupportingFuncs:
 
     def setup_method(self, method):
-        self.games_data, self.games_by_player = sample_data_setup()
+        self.games_by_player = sample_data_setup()
 
     def test_create_games_by_player(self):
         res = create_games_by_player(players_games_list=self.games_data)
@@ -129,8 +129,7 @@ class TestAPIPlayersPath:
     @classmethod
     def setup_class(cls):
         cls.client = start_application()
-        # TODO: is 'games_data' needed?
-        cls.games_data, cls.games_by_player = sample_data_setup()
+        cls.games_by_player = sample_data_setup()
         with MockSession(app.engine) as session:
             add_ratings(cls.games_by_player, session)
     
@@ -165,7 +164,7 @@ class TestAPIGamesPath:
     @classmethod
     def setup_class(cls):
         cls.client = start_application()
-        cls.games_data, cls.games_by_player = sample_data_setup()
+        cls.games_by_player = sample_data_setup()
     
     @classmethod
     def teardown_class(cls):
@@ -218,7 +217,7 @@ class TestAPIRatingMods:
         cls.client.close()
 
     def setup_method(self, method):
-        self.games_data, self.games_by_player = sample_data_setup()
+        self.games_by_player = sample_data_setup()
 
     # ============ Test Patch Methods =============
     def test_patch_valid_update(self):
