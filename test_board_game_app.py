@@ -48,8 +48,6 @@ def start_application():
     return client
 
 
-# TODO: either remove inheriting from MagicMock, or else use MagicMock's functionality
-
 # Mocks the result of a session query / filter operation
 class MockQueryResult:
 
@@ -61,12 +59,14 @@ class MockQueryResult:
         for item in self.results:
             matches = True
             for k, v in kwargs.items():
-                if getattr(matches, k) != v:
+                if getattr(item, k) != v:
                     matches = False
                     break
 
             if matches:
                 filtered.append(item)
+        
+        return MockQueryResult(filtered)
 
     def all(self):
         return self.results
@@ -75,7 +75,7 @@ class MockDB:
     def __init__(self):
         self.entries = []
 
-class MockSession():
+class MockSession:
     
     def __init__(self, engine: MagicMock):
         self.engine = engine
@@ -143,6 +143,7 @@ class TestAPIPlayersPath:
         assert response.status_code == 200
         assert response.json() == self.games_by_player
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_get_player(self):
         response = self.client.get("/api/players/em")
         assert response.status_code == 200
@@ -152,7 +153,8 @@ class TestAPIPlayersPath:
             "Mysterium": 9,
             "Rivals of Catan": 8
             }
-        
+    
+    @patch("board_game_app.Session", new=MockSession)
     def test_get_player_invalid_name(self):
         response = self.client.get("/api/players/bad")
         assert response.status_code == 404
