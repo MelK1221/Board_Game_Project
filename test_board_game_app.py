@@ -1,5 +1,9 @@
+from sqlalchemy import Engine
+from sqlalchemy.orm import Session
+
 from fastapi.testclient import TestClient
 from pytest import mark
+from unittest.mock import patch, MagicMock
 
 from board_game_app import create_games_by_player, app
 
@@ -39,8 +43,7 @@ def sample_data_setup():
     return games_data, games_by_player
 
 def start_application():
-    # FIXME
-    games_data, games_by_player = sample_data_setup()
+    app.engine = MagicMock(spec=Engine)
     client = TestClient(app)
     return client
 
@@ -74,14 +77,22 @@ class TestAPIPlayersPath:
     
     @classmethod
     def setup_class(cls):
+        cls.mock_session = MagicMock(spec=Session)
         cls.client = start_application()
+        # TODO: is 'games_data' needed?
         cls.games_data, cls.games_by_player = sample_data_setup()
+        # TODO: pass 'games_by_player' to 'add_ratings' - add ratings should add to a fake DB of some kind
+        # then have return value here get from the fake DB
+        cls.mock_session.query.return_value.all.return_value = cls.games_by_player
     
     @classmethod
     def teardown_class(cls):
         cls.client.close()
 
-    def test_get_players(self):
+    @patch("board_game_app.Session")
+    def test_get_players(self, mock_session_class):
+        mock_session_class.return_value.__enter__.return_value = self.mock_session
+
         response = self.client.get("/api/players")
         assert response.status_code == 200
         assert response.json() == self.games_by_player
@@ -100,6 +111,7 @@ class TestAPIPlayersPath:
         response = self.client.get("/api/players/bad")
         assert response.status_code == 404
         assert response.json() == {"detail": "Player Bad not found."}
+
 
 class TestAPIGamesPath:
     
@@ -147,7 +159,7 @@ class TestAPIGamesPath:
         assert response.json() == {"detail": "Game Zelda not rated by Em."}
   
 
-  # Test patch/post/delete methods
+# Test patch/post/delete methods
 @mark.skip()
 class TestAPIRatingMods:
     @classmethod
@@ -159,9 +171,7 @@ class TestAPIRatingMods:
         cls.client.close()
 
     def setup_method(self, method):
-        self.games_data, self.games_by_player, self.all_player_games = sample_data_setup()
-        app.games_by_player = self.games_by_player
-        app.all_player_games = self.all_player_games
+        self.games_data, self.games_by_player = sample_data_setup()
 
     # ============ Test Patch Methods =============
     def test_patch_valid_update(self):

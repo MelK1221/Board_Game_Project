@@ -161,6 +161,13 @@ def ensure_game_database(engine: Engine):
         print(f"Initialized database {DB_NAME}")
 
 
+def add_ratings(games_by_player: Dict, session: Session):
+    for player, game_ratings in games_by_player.items():
+        for game, value in game_ratings.items():
+            rating = Rating(player=player, game=game, rating=value)
+            session.add(rating)
+
+
 def initialize_ratings_table(engine, games_by_player: dict):
     """
     Initialize table in db from the `games_by_player` mapping
@@ -170,11 +177,7 @@ def initialize_ratings_table(engine, games_by_player: dict):
     Base.metadata.create_all(engine)
 
     with Session(engine) as session:
-        # Add entries to table
-        for player, game_ratings in games_by_player.items():
-            for game, value in game_ratings.items():
-                rating = Rating(player=player, game=game, rating=value)
-                session.add(rating)
+        add_ratings(games_by_player, session)
 
         try:
             session.commit()
