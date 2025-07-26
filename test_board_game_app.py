@@ -43,6 +43,7 @@ def sample_data_setup():
 
 def start_application():
     app.engine = MagicMock(spec=Engine)
+    app.engine.db = MockDB()
     client = TestClient(app)
     return client
 
@@ -70,12 +71,14 @@ class MockQueryResult:
     def all(self):
         return self.results
 
-
-class MockSession(MagicMock):
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class MockDB:
+    def __init__(self):
         self.entries = []
+
+class MockSession():
+    
+    def __init__(self, engine: MagicMock):
+        self.engine = engine
     
     def __enter__(self):
         return self
@@ -83,11 +86,16 @@ class MockSession(MagicMock):
     def __exit__(self, exc_type, exc_value, traceback):
         pass
     
+    def _get_db(self) -> MockDB:
+        return self.engine.db
+
     def add(self, entry):
-        self.entries.append(entry)
+        db = self._get_db()
+        db.entries.append(entry)
 
     def query(self, T):
-        entries_type_T = list(filter(lambda x: isinstance(x, T), self.entries))
+        db = self._get_db()
+        entries_type_T = list(filter(lambda x: isinstance(x, T), db.entries))
         return MockQueryResult(entries_type_T)
 
 
@@ -120,19 +128,18 @@ class TestAPIPlayersPath:
     
     @classmethod
     def setup_class(cls):
-        cls.mock_session = MockSession()
         cls.client = start_application()
         # TODO: is 'games_data' needed?
         cls.games_data, cls.games_by_player = sample_data_setup()
-        add_ratings(cls.games_by_player, cls.mock_session)
+        with MockSession(app.engine) as session:
+            add_ratings(cls.games_by_player, session)
     
     @classmethod
     def teardown_class(cls):
         cls.client.close()
 
-    @patch("board_game_app.Session")
-    def test_get_players(self, mock_session_class):
-        mock_session_class.return_value = self.mock_session
+    @patch("board_game_app.Session", new=MockSession)
+    def test_get_players(self):
         response = self.client.get("/api/players")
         assert response.status_code == 200
         assert response.json() == self.games_by_player
