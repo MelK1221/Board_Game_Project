@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Dict
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, Engine, Column, Integer, String, UniqueConstraint
@@ -35,8 +35,6 @@ class PlayerEntry(BaseModel):
     name: str
     games: Dict[str, int]
 
-# class RatingUpdateRequest(BaseModel):
-#     rating_update: int
 class PlayerNotFoundError(Exception):
     """Custom exception for player not found."""
     def __init__(self, player_name):
@@ -138,8 +136,6 @@ def get_player_rating(game: str, player_name: str):
         ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
         if not ratings:
             raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
-    if player_name not in app.games_by_player.keys():
-        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
 
     rating = ratings[0].rating
 
