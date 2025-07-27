@@ -23,6 +23,21 @@ Bonus idea: Integrate with the BoardGameGeek API to fetch game info automaticall
 
 ### Installation
 ```
+# Install PostgreSQL (mac OS)
+brew install postgresql
+brew services start postgresql
+
+# Setup Postgres with application user
+psql postgres
+postgres=# CREATE USER app WITH PASSWORD '[REDACTED]';
+postgres=# ALTER USER app WITH SUPERUSER;
+# Verify user is present and has expected permissions
+postgres=# \du
+
+# Store password [REDACTED] in `password.txt` file
+echo "[REDACTED]" > password.txt
+
+# Install python application
 pip install -r requirements.txt
 ```
 
@@ -33,6 +48,29 @@ pip install -r requirements.txt
 Then open the UI at the desired endpoint:
 http://localhost:8080/[endpoint]
 
+
+### Stop PostgreSQL Server
+```
+brew services stop postgresql
+# Check Status
+brew services info postgresql
+```
+
+### Interacting with PostgreSQL
+```
+# Show databases
+postgres=# \list
+# Connect to Database
+postgres=# \c board_games
+# Show tables in DB
+postgres=# \dt
+# Describe the 'ratings' table
+board_games=# \d ratings
+# See all current entries
+board_games=# SELECT * FROM ratings;
+# Drop table manually
+board_games=# DROP TABLE ratings;
+```
 
 ### Test the application
 pytest is the testing framework: https://docs.pytest.org/en/stable/getting-started.html#get-started

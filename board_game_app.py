@@ -8,12 +8,23 @@ import argparse
 import csv
 import json
 import os
+from collections import defaultdict
+from pathlib import Path
 from typing import Dict
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import create_engine, Engine, Column, Integer, String, UniqueConstraint
+from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy.orm import declarative_base, Session
+from sqlalchemy.exc import IntegrityError
+
+DB_USER = "app"
+DB_HOST = "127.0.0.1"
+DB_NAME = "board_games"
+DB_PASSWORD_FILE = "password.txt"
 from pydantic import BaseModel
 
 
@@ -24,8 +35,6 @@ class PlayerEntry(BaseModel):
     name: str
     games: Dict[str, int]
 
-# class RatingUpdateRequest(BaseModel):
-#     rating_update: int
 class PlayerNotFoundError(Exception):
     """Custom exception for player not found."""
     def __init__(self, player_name):
@@ -33,13 +42,29 @@ class PlayerNotFoundError(Exception):
         self.message = f"Player {self.player_name} not found."
         super().__init__(self.message)
 
+### DB ###
+Base = declarative_base()
+
+# Define table schema
+class Rating(Base):
+    __tablename__ = "ratings"
+
+    id = Column(Integer, primary_key=True)
+    player = Column(String, nullable=False)
+    game = Column(String, nullable=False)
+    rating = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("player", "game", name="player-and-game"),
+    )
+
+### Fast API Application ###
 app = FastAPI(
     title="Board Games API",
     summary="Kukura Family & Friends Board Game Ratings",
     version="1",
     servers=[{"url": "/"}],
 )
-
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -52,49 +77,71 @@ def favicon():
 ### API endpoints ###
 @app.get("/api/players/")
 def get_players():
-    return app.games_by_player
+    games_by_player = defaultdict(dict)
+    with Session(app.engine) as session:
+        ratings = session.query(Rating).all()
+        for rating in ratings:
+            games_by_player[rating.player].update({rating.game: rating.rating})
+
+    return games_by_player
 
 
 @app.get("/api/players/{player_name}")
 def get_player(player_name: str):
+    player_to_ratings = {}
     player_name = player_name.capitalize()
-    if player_name not in app.games_by_player.keys():
-        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
+    with Session(app.engine) as session:  
+        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+        if not player_ratings:
+            raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
+        
+        for rating in player_ratings:
+            player_to_ratings[rating.game] = rating.rating
 
-    return app.games_by_player[player_name]
+    return player_to_ratings
 
 
 @app.get("/api/games/")
 def get_games():
-    return app.all_player_games
+    games = []
+    with Session(app.engine) as session:
+        game_results = session.query(Rating.game).distinct().all()
+        # When you query a single attribute you still get back a tuple (1-tuple)
+        # For example: game_results =[('Ticket to ride',), ('Risk',), ...]
+        games = [game[0] for game in game_results]
+
+    return games
 
 
 @app.get("/api/games/{game}")
 def get_game_ratings(game: str):
     game = game.capitalize()
     player_ratings = {}
-    if game not in app.all_player_games:
-        raise HTTPException(status_code=404, detail=f"Game {game} not found.")
 
-    for name, game_ratings in app.games_by_player.items():
-        if game in game_ratings.keys():
-            player_ratings[name] = game_ratings[game]
+    with Session(app.engine) as session:  
+        game_ratings = session.query(Rating).filter_by(game=game).all()
+        if not game_ratings:
+            raise HTTPException(status_code=404, detail=f"Game {game} not found.")
+
+        for rating in game_ratings:
+            player_ratings[rating.player] = rating.rating
 
     return player_ratings
 
 
 @app.get("/api/games/{game}/{player_name}")
 def get_player_rating(game: str, player_name: str):
-    player_rating = {}
     player_name = player_name.capitalize()
     game = game.capitalize()
-    if player_name not in app.games_by_player.keys():
-        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
+    rating = None
+    with Session(app.engine) as session:  
+        ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
+        if not ratings:
+            raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
 
-    if game not in app.games_by_player[player_name].keys():
-        raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+    rating = ratings[0].rating
 
-    return app.games_by_player[player_name][game]
+    return rating
 
 @app.patch("/api/games/{game}/{player_name}", response_model = PlayerEntry)
 def update_player_rating(
@@ -166,6 +213,50 @@ def delete_game_rating(
 
     return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
 
+
+### Database Methods ###
+def connect_to_database() -> Engine:
+    current_dir = Path(__file__).parent
+    password_path = current_dir / "password.txt"
+    db_password: str = ""
+    with password_path.open() as f:
+        db_password = f.read()  
+
+    url = f"postgresql://{DB_USER}:{db_password}@{DB_HOST}/{DB_NAME}"
+    engine = create_engine(url)
+    return engine
+
+
+def ensure_game_database(engine: Engine):
+    if not database_exists(engine.url):
+        create_database(engine.url)
+        print(f"Initialized database {DB_NAME}")
+
+
+def add_ratings(games_by_player: Dict, session: Session):
+    for player, game_ratings in games_by_player.items():
+        for game, value in game_ratings.items():
+            rating = Rating(player=player, game=game, rating=value)
+            session.add(rating)
+
+
+def initialize_ratings_table(engine, games_by_player: dict):
+    """
+    Initialize table in db from the `games_by_player` mapping
+    games_by_player maps player_name -> {game -> rating}
+    """
+    # Ensure table exists
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        add_ratings(games_by_player, session)
+
+        try:
+            session.commit()
+        except IntegrityError as e:
+            print(f"Commit failed: {e}")
+
+
 ### Supporting functions ###
 def parse_players_file(filename, ext) -> list:
     """
@@ -208,19 +299,6 @@ def create_games_by_player(players_games_list):
         games_by_player[player["name"]] = player["games"]
     
     return games_by_player
-
-
-def all_games(games_by_player: dict[str, list]):
-    """
-    Create list of all games rated.
-    """
-    
-    all_games = []
-    for player in games_by_player.keys():
-        player_game_list = list(games_by_player[player].keys())
-        all_games = list(set(all_games + player_game_list))
-    
-    return all_games
 
 
 def print_player_likes(args: argparse.Namespace, games_by_player):
@@ -268,7 +346,10 @@ def print_player_likes(args: argparse.Namespace, games_by_player):
 
 
 ### Main application loop ###
-def run(args: argparse.Namespace):
+def run(engine: Engine, args: argparse.Namespace):
+
+    ensure_game_database(engine)
+
     players_games_list = []
 
     # Check for existence of path
@@ -285,18 +366,25 @@ def run(args: argparse.Namespace):
     
     # Create different maps for endpoint access
     games_by_player = create_games_by_player(players_games_list)
-    all_player_games = all_games(games_by_player)
 
     if args.player:
         print_player_likes(args, games_by_player)
     else:
-        # Maps a player to a dict of the games they have rated
-        app.games_by_player = games_by_player
-        # List of all unique games that have been rated by players
-        app.all_player_games = all_player_games
+        # Database connection
+        app.engine = engine
+
+        initialize_ratings_table(engine, games_by_player)
 
         # Start server
         uvicorn.run(app, host="localhost", port=args.port)
+
+
+def shutdown(engine: Engine):
+    with Session(engine) as session:
+        # Clear out table entries on shutdown.
+        session.query(Rating).delete()
+        session.commit()
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -314,8 +402,10 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_args()
-    
+    engine = connect_to_database()
     try:
-        run(args)
+        run(engine, args)
     except (FileNotFoundError, PlayerNotFoundError, ValueError) as e:
         print(e)
+    finally:
+        shutdown(engine)
