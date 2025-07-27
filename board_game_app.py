@@ -106,6 +106,8 @@ def get_games():
     games = []
     with Session(app.engine) as session:
         game_results = session.query(Rating.game).distinct().all()
+        # When you query a single attribute you still get back a tuple (1-tuple)
+        # For example: game_results =[('Ticket to ride',), ('Risk',), ...]
         games = [game[0] for game in game_results]
 
     return games

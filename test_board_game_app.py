@@ -1,10 +1,11 @@
 from sqlalchemy import Engine
+from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from fastapi.testclient import TestClient
 from pytest import mark
 from unittest.mock import patch, MagicMock
 
-from board_game_app import add_ratings, create_games_by_player, app, Rating
+from board_game_app import add_ratings, create_games_by_player, app
 
 
 ### Setup Test Data ###
@@ -67,6 +68,10 @@ class MockQueryResult:
                 filtered.append(item)
         
         return MockQueryResult(filtered)
+    
+    def distinct(self):
+        unique = set(self.results)
+        return MockQueryResult(list(unique))
 
     def all(self):
         return self.results
@@ -94,9 +99,15 @@ class MockSession:
         db.entries.append(entry)
 
     def query(self, T):
+        # Note: The type T can be a table class or a particular column in that class
         db = self._get_db()
-        entries_type_T = list(filter(lambda x: isinstance(x, T), db.entries))
-        return MockQueryResult(entries_type_T)
+        results: list = []
+        if isinstance(T, InstrumentedAttribute):
+            table_results = list(filter(lambda x: isinstance(x, T.class_), db.entries))
+            results = [(getattr(entry, T.key),) for entry in table_results]
+        else:
+            results = list(filter(lambda x: isinstance(x, T), db.entries))
+        return MockQueryResult(results)
 
 
 ### Test Supporting Funtions ###
@@ -167,17 +178,27 @@ class TestAPIGamesPath:
     def setup_class(cls):
         cls.client = start_application()
         cls.games_by_player = sample_data_setup()
+        with MockSession(app.engine) as session:
+            add_ratings(cls.games_by_player, session)
     
     @classmethod
     def teardown_class(cls):
         cls.client.close()
     
+    @patch("board_game_app.Session", new=MockSession)
     def test_get_games(self):
         response = self.client.get("/api/games")
         assert response.status_code == 200
-        # FIXME
-        # assert response.json() == self.all_player_games
+        assert sorted(response.json()) == sorted([
+            "Boggle",
+            "Rivals of Catan",
+            "Codenames",
+            "Hanabi",
+            "Mysterium",
+            "Settlers of Catan",
+        ])
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_get_game_ratings(self):
         response = self.client.get("/api/games/hanabi")
         assert response.status_code == 200
@@ -186,21 +207,25 @@ class TestAPIGamesPath:
             "Mel": 8
         }
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_get_game_ratings_invalid_game(self):
         response = self.client.get("/api/games/zelda")
         assert response.status_code == 404
         assert response.json() == {"detail": "Game Zelda not found."}
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_get_player_rating(self):
         response = self.client.get("/api/games/hanabi/mel")
         assert response.status_code == 200
         assert response.json() == 8
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_get_player_rating_invalid_name(self):
         response = self.client.get("/api/games/hanabi/bad")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Player Bad not found."}
+        assert response.json() == {"detail": "Game Hanabi not rated by Bad."}
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_get_player_rating_invalid_game(self):
         response = self.client.get("/api/games/zelda/em")
         assert response.status_code == 404
