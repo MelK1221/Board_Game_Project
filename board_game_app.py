@@ -178,17 +178,23 @@ def add_game_rating(
     """
     game = game.capitalize()
     player_name = player_name.capitalize()
+    player_to_ratings = {}
 
-    if player_name in app.games_by_player.keys():
-        if game in app.games_by_player[player_name]:
+    with Session(app.engine) as session:      
+        try:
+            rating = Rating(player=player_name, game=game, rating=rating)
+            session.add(rating)
+            session.commit()
+        except IntegrityError:
+            session.rollback()
             raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}.")
-        else:
-            app.games_by_player[player_name][game] = rating
-    else:
-        app.games_by_player[player_name] = {game: rating}
 
+        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+            
+        for rating in player_ratings:
+            player_to_ratings[rating.game] = rating.rating
 
-    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
+    return PlayerEntry(name=player_name, games=player_to_ratings)
 
 @app.delete("/api/games/{game}/{player_name}", response_model = PlayerEntry)
 def delete_game_rating(
