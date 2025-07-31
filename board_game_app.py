@@ -155,16 +155,22 @@ def update_player_rating(
     """
     game = game.capitalize()
     player_name = player_name.capitalize()
+    player_to_ratings = {}
 
-    if player_name not in app.games_by_player.keys():
-        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
-    
-    if game not in app.games_by_player[player_name].keys():
-        raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
-    
-    app.games_by_player[player_name][game] = rating
+    with Session(app.engine) as session:
+        ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
 
-    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
+        if not ratings:
+            raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+        
+        ratings[0].rating = rating
+        session.commit()
+        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+            
+        for rating in player_ratings:
+            player_to_ratings[rating.game] = rating.rating
+
+    return PlayerEntry(name=player_name, games= player_to_ratings)
 
 @app.post("/api/games/{game}/{player_name}", response_model = PlayerEntry, status_code=201)
 def add_game_rating(
