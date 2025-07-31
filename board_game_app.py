@@ -201,17 +201,22 @@ def delete_game_rating(
     """
     game = game.capitalize()
     player_name = player_name.capitalize()
+    player_to_ratings = {}
 
-    if player_name not in app.games_by_player.keys():
-        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
-    
-    if game not in app.games_by_player[player_name].keys():
-        raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
-    
-    deleted_rating = app.games_by_player[player_name].pop(game)
+    with Session(app.engine) as session:
+        ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
+        if not ratings:
+            raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+            
+        session.delete(ratings[0])
+        session.commit()
 
+        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+        
+        for rating in player_ratings:
+            player_to_ratings[rating.game] = rating.rating
 
-    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
+    return PlayerEntry(name=player_name, games=player_to_ratings)
 
 
 ### Database Methods ###
