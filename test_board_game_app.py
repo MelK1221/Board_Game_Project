@@ -39,7 +39,6 @@ def sample_data_setup():
             "games": mel_games
         }
     ]
-    # games_by_player = create_games_by_player(games_data)
 
     return games_data
 
@@ -163,15 +162,9 @@ class TestAPIPlayersPath(TestAPIBase):
     
     @classmethod
     def setup_class(cls):
-        # cls.client = start_application()
-        # cls.games_by_player = sample_data_setup()
         super().setup_class()
         with MockSession(app.engine) as session:
             add_ratings(cls.games_by_player, session)
-    
-    # @classmethod
-    # def teardown_class(cls):
-    #     cls.client.close()
 
     @patch("board_game_app.Session", new=MockSession)
     def test_get_players(self):
@@ -201,15 +194,9 @@ class TestAPIGamesPath(TestAPIBase):
     
     @classmethod
     def setup_class(cls):
-        # cls.client = start_application()
-        # cls.games_by_player = sample_data_setup()
         super().setup_class()
         with MockSession(app.engine) as session:
             add_ratings(cls.games_by_player, session)
-    
-    # @classmethod
-    # def teardown_class(cls):
-    #     cls.client.close()
     
     @patch("board_game_app.Session", new=MockSession)
     def test_get_games(self):
@@ -260,16 +247,8 @@ class TestAPIGamesPath(TestAPIBase):
 
 # Test patch/post/delete methods
 class TestAPIRatingMods(TestAPIBase):
-    # @classmethod
-    # def setup_class(cls):
-    #     cls.client = start_application()
-
-    # @classmethod
-    # def teardown_class(cls):
-    #     cls.client.close()
 
     def setup_method(self, method):
-        # self.games_by_player = sample_data_setup()
         app.engine.db = MockDB()
         with MockSession(app.engine) as session:
             add_ratings(self.games_by_player, session)

@@ -337,14 +337,14 @@ def print_player_likes(args: argparse.Namespace, games_by_player):
 
     print("The following is a list of current players and the games they have rated:")
     for player in players_to_disp:
-        games_list = [player_game["Game"] for player_game in games_by_player[player]]
+        games_list = games_by_player[player].keys()
         games = ", ".join(games_list)
         print(f"{player} has rated {games}.")
 
     if args.verbose and args.player == ALL:
         joint_likes: set = set()
         for player in players:
-            new_games = set([player_game["Game"] for player_game in games_by_player[player]])
+            new_games = set(games_by_player[player].keys())
 
             if not joint_likes:
                 # Initialize intersection for new player
