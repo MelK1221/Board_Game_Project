@@ -155,16 +155,22 @@ def update_player_rating(
     """
     game = game.capitalize()
     player_name = player_name.capitalize()
+    player_to_ratings = {}
 
-    if player_name not in app.games_by_player.keys():
-        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
-    
-    if game not in app.games_by_player[player_name].keys():
-        raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
-    
-    app.games_by_player[player_name][game] = rating
+    with Session(app.engine) as session:
+        ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
 
-    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
+        if not ratings:
+            raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+        
+        ratings[0].rating = rating
+        session.commit()
+        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+            
+        for rating in player_ratings:
+            player_to_ratings[rating.game] = rating.rating
+
+    return PlayerEntry(name=player_name, games= player_to_ratings)
 
 @app.post("/api/games/{game}/{player_name}", response_model = PlayerEntry, status_code=201)
 def add_game_rating(
@@ -178,17 +184,23 @@ def add_game_rating(
     """
     game = game.capitalize()
     player_name = player_name.capitalize()
+    player_to_ratings = {}
 
-    if player_name in app.games_by_player.keys():
-        if game in app.games_by_player[player_name]:
+    with Session(app.engine) as session:      
+        try:
+            rating = Rating(player=player_name, game=game, rating=rating)
+            session.add(rating)
+            session.commit()
+        except IntegrityError:
+            session.rollback()
             raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}.")
-        else:
-            app.games_by_player[player_name][game] = rating
-    else:
-        app.games_by_player[player_name] = {game: rating}
 
+        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+            
+        for rating in player_ratings:
+            player_to_ratings[rating.game] = rating.rating
 
-    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
+    return PlayerEntry(name=player_name, games=player_to_ratings)
 
 @app.delete("/api/games/{game}/{player_name}", response_model = PlayerEntry)
 def delete_game_rating(
@@ -201,17 +213,22 @@ def delete_game_rating(
     """
     game = game.capitalize()
     player_name = player_name.capitalize()
+    player_to_ratings = {}
 
-    if player_name not in app.games_by_player.keys():
-        raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
-    
-    if game not in app.games_by_player[player_name].keys():
-        raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
-    
-    deleted_rating = app.games_by_player[player_name].pop(game)
+    with Session(app.engine) as session:
+        ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
+        if not ratings:
+            raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+            
+        session.delete(ratings[0])
+        session.commit()
 
+        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+        
+        for rating in player_ratings:
+            player_to_ratings[rating.game] = rating.rating
 
-    return PlayerEntry(name=player_name, games=app.games_by_player[player_name])
+    return PlayerEntry(name=player_name, games=player_to_ratings)
 
 
 ### Database Methods ###
@@ -320,14 +337,14 @@ def print_player_likes(args: argparse.Namespace, games_by_player):
 
     print("The following is a list of current players and the games they have rated:")
     for player in players_to_disp:
-        games_list = [player_game["Game"] for player_game in games_by_player[player]]
+        games_list = games_by_player[player].keys()
         games = ", ".join(games_list)
         print(f"{player} has rated {games}.")
 
     if args.verbose and args.player == ALL:
         joint_likes: set = set()
         for player in players:
-            new_games = set([player_game["Game"] for player_game in games_by_player[player]])
+            new_games = set(games_by_player[player].keys())
 
             if not joint_likes:
                 # Initialize intersection for new player
