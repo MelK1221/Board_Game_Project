@@ -1,5 +1,6 @@
 from sqlalchemy import Engine
 from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.exc import IntegrityError
 
 from fastapi.testclient import TestClient
 from pytest import mark
@@ -38,9 +39,8 @@ def sample_data_setup():
             "games": mel_games
         }
     ]
-    games_by_player = create_games_by_player(games_data)
 
-    return games_by_player
+    return games_data
 
 def start_application():
     app.engine = MagicMock(spec=Engine)
@@ -96,6 +96,9 @@ class MockSession:
 
     def add(self, entry):
         db = self._get_db()
+        for rating in db.entries:
+            if rating.player == entry.player and rating.game == entry.game:
+                raise IntegrityError(statement=None, params=None, orig=Exception("Duplicate Entry"))
         db.entries.append(entry)
 
     def query(self, T):
@@ -108,13 +111,33 @@ class MockSession:
         else:
             results = list(filter(lambda x: isinstance(x, T), db.entries))
         return MockQueryResult(results)
+    
+    def commit(self):
+        pass
 
+    def rollback(self):
+        pass
+
+    def delete(self, entry):
+        db = self._get_db()
+        db.entries.remove(entry)
+
+class TestAPIBase:
+    @classmethod
+    def setup_class(cls):
+        cls.games_data = sample_data_setup()
+        cls.games_by_player = create_games_by_player(cls.games_data)
+        cls.client = start_application()
+
+    @classmethod
+    def teardown_class(cls):
+        cls.client.close()
 
 ### Test Supporting Funtions ###
 class TestSupportingFuncs:
 
     def setup_method(self, method):
-        self.games_by_player = sample_data_setup()
+        self.games_data = sample_data_setup()
 
     def test_create_games_by_player(self):
         res = create_games_by_player(players_games_list=self.games_data)
@@ -135,18 +158,13 @@ class TestSupportingFuncs:
         
 
 ### Test API Get Endpoints ###
-class TestAPIPlayersPath:
+class TestAPIPlayersPath(TestAPIBase):
     
     @classmethod
     def setup_class(cls):
-        cls.client = start_application()
-        cls.games_by_player = sample_data_setup()
+        super().setup_class()
         with MockSession(app.engine) as session:
             add_ratings(cls.games_by_player, session)
-    
-    @classmethod
-    def teardown_class(cls):
-        cls.client.close()
 
     @patch("board_game_app.Session", new=MockSession)
     def test_get_players(self):
@@ -172,18 +190,13 @@ class TestAPIPlayersPath:
         assert response.json() == {"detail": "Player Bad not found."}
 
 
-class TestAPIGamesPath:
+class TestAPIGamesPath(TestAPIBase):
     
     @classmethod
     def setup_class(cls):
-        cls.client = start_application()
-        cls.games_by_player = sample_data_setup()
+        super().setup_class()
         with MockSession(app.engine) as session:
             add_ratings(cls.games_by_player, session)
-    
-    @classmethod
-    def teardown_class(cls):
-        cls.client.close()
     
     @patch("board_game_app.Session", new=MockSession)
     def test_get_games(self):
@@ -233,20 +246,16 @@ class TestAPIGamesPath:
   
 
 # Test patch/post/delete methods
-@mark.skip()
-class TestAPIRatingMods:
-    @classmethod
-    def setup_class(cls):
-        cls.client = start_application()
-
-    @classmethod
-    def teardown_class(cls):
-        cls.client.close()
+class TestAPIRatingMods(TestAPIBase):
 
     def setup_method(self, method):
-        self.games_by_player = sample_data_setup()
+        app.engine.db = MockDB()
+        with MockSession(app.engine) as session:
+            add_ratings(self.games_by_player, session)
+
 
     # ============ Test Patch Methods =============
+    @patch("board_game_app.Session", new=MockSession)
     def test_patch_valid_update(self):
         response = self.client.patch("/api/games/hanabi/mel?rating=4")
         assert response.status_code == 200
@@ -258,17 +267,20 @@ class TestAPIRatingMods:
             "Settlers of Catan": 6
         }
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_patch_invalid_name(self):
         response = self.client.patch("/api/games/hanabi/bad?rating=4")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Player Bad not found."}
+        assert response.json() == {"detail": "Game Hanabi not rated by Bad."}
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_patch_invalid_game(self):
         response = self.client.patch("/api/games/bad/mel?rating=4")
         assert response.status_code == 404
         assert response.json() == {"detail": "Game Bad not rated by Mel."}
 
     # ============ Test Post Methods =============
+    @patch("board_game_app.Session", new=MockSession)
     def test_post_game_added(self):
         response = self.client.post("/api/games/new_game/em?rating=5")
         assert response.status_code == 201
@@ -281,6 +293,7 @@ class TestAPIRatingMods:
             "New_game": 5
         }
     
+    @patch("board_game_app.Session", new=MockSession)
     def test_post_player_added(self):
         response = self.client.post("/api/games/hanabi/new_player?rating=5")
         assert response.status_code == 201
@@ -289,12 +302,14 @@ class TestAPIRatingMods:
             "Hanabi": 5
         }
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_post_entry_exists(self):
         response = self.client.post("/api/games/hanabi/em?rating=5")
         assert response.status_code == 409
         assert response.json() == {"detail": "Game Hanabi has already been rated by Em."}
 
     # ============ Test Delete Methods =============
+    @patch("board_game_app.Session", new=MockSession)
     def test_delete_valid_entry(self):
         response = self.client.delete("/api/games/hanabi/mel")
         assert response.status_code == 200
@@ -305,12 +320,14 @@ class TestAPIRatingMods:
             "Settlers of Catan": 6
         }
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_delete_invalid_game(self):
         response = self.client.delete("/api/games/bad/mel")
         assert response.status_code == 404
         assert response.json() == {"detail": "Game Bad not rated by Mel."}
 
+    @patch("board_game_app.Session", new=MockSession)
     def test_delete_invalid_name(self):
         response = self.client.delete("/api/games/hanabi/bad")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Player Bad not found."}
+        assert response.json() == {"detail": "Game Hanabi not rated by Bad."}
