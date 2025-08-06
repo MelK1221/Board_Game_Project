@@ -205,7 +205,7 @@ def add_game_rating(
 
     return PlayerEntry(name=player_name, games=updated_rating_entry)
 
-@app.delete("/api/games/{game}/{player_name}", response_model = PlayerEntry)
+@app.delete("/api/games/{game}/{player_name}", status_code=204)
 def delete_game_rating(
     game: str,
     player_name: str
@@ -226,12 +226,12 @@ def delete_game_rating(
         session.delete(ratings[0])
         session.commit()
 
-        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+        # player_ratings = session.query(Rating).filter_by(player=player_name).all()
         
-        for rating in player_ratings:
-            player_to_ratings[rating.game] = rating.rating
+        # for rating in player_ratings:
+        #     player_to_ratings[rating.game] = rating.rating
 
-    return PlayerEntry(name=player_name, games=player_to_ratings)
+    return
 
 
 ### Database Methods ###
