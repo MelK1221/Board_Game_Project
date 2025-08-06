@@ -166,10 +166,6 @@ def update_player_rating(
         ratings[0].rating = rating
         session.commit()
         updated_rating_entry[game] = ratings[0].rating
-        # player_ratings = session.query(Rating).filter_by(player=player_name).all()
-            
-        # for rating in player_ratings:
-        #     player_to_ratings[rating.game] = rating.rating
 
     return PlayerEntry(name=player_name, games=updated_rating_entry)
 
@@ -196,10 +192,6 @@ def add_game_rating(
             session.rollback()
             raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}.")
 
-        # player_ratings = session.query(Rating).filter_by(player=player_name).all()
-            
-        # for rating in player_ratings:
-        #     player_to_ratings[rating.game] = rating.rating
         updated_rating_entry[game] = rating
 
 
@@ -225,11 +217,6 @@ def delete_game_rating(
             
         session.delete(ratings[0])
         session.commit()
-
-        # player_ratings = session.query(Rating).filter_by(player=player_name).all()
-        
-        # for rating in player_ratings:
-        #     player_to_ratings[rating.game] = rating.rating
 
     return
 
