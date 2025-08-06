@@ -318,50 +318,6 @@ def create_games_by_player(players_games_list):
     return games_by_player
 
 
-def print_player_likes(args: argparse.Namespace, games_by_player):
-    """
-    Print the players and their favorite games.
-    If verbose is set, print the games that all players like.
-    """
-    # Print requested player(s) and their favorite games    
-    players = [player for player in games_by_player.keys()]
-    players_to_disp: list = []
-    if args.player == ALL:
-        players_to_disp = players
-    else:
-        # Check if requested player is in dict
-        req_player = args.player.capitalize()
-        if req_player not in players:
-            raise PlayerNotFoundError(req_player)
-        players_to_disp = [req_player]
-
-    print("The following is a list of current players and the games they have rated:")
-    for player in players_to_disp:
-        games_list = games_by_player[player].keys()
-        games = ", ".join(games_list)
-        print(f"{player} has rated {games}.")
-
-    if args.verbose and args.player == ALL:
-        joint_likes: set = set()
-        for player in players:
-            new_games = set(games_by_player[player].keys())
-
-            if not joint_likes:
-                # Initialize intersection for new player
-                joint_likes = new_games
-            else:
-                # Only keep likes if shared by all previous players
-                joint_likes = joint_likes.intersection(new_games)
-                if not joint_likes:
-                    # No common likes, end loop with empty set
-                    break
-        
-        if not joint_likes:
-            print("No games listed that all players have rated.")
-        else:
-            print(f"All players have rated: {', '.join(list(joint_likes))}")
-
-
 ### Main application loop ###
 def run(engine: Engine, args: argparse.Namespace):
 
@@ -384,16 +340,13 @@ def run(engine: Engine, args: argparse.Namespace):
     # Create different maps for endpoint access
     games_by_player = create_games_by_player(players_games_list)
 
-    if args.player:
-        print_player_likes(args, games_by_player)
-    else:
-        # Database connection
-        app.engine = engine
+    # Database connection
+    app.engine = engine
 
-        initialize_ratings_table(engine, games_by_player)
+    initialize_ratings_table(engine, games_by_player)
 
-        # Start server
-        uvicorn.run(app, host="localhost", port=args.port)
+    # Start server
+    uvicorn.run(app, host="localhost", port=args.port)
 
 
 def shutdown(engine: Engine):
@@ -408,7 +361,6 @@ def parse_args() -> argparse.Namespace:
 
     # Add arguments
     parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
-    parser.add_argument("-p","--player", help="Player name to get favorite games for")
     parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
 
