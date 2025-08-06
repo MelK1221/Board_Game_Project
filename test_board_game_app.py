@@ -44,7 +44,6 @@ def sample_data_setup():
 
 def start_application():
     app.engine = MagicMock(spec=Engine)
-    app.engine.db = MockDB()
     client = TestClient(app)
     return client
 
@@ -160,9 +159,10 @@ class TestSupportingFuncs:
 ### Test API Get Endpoints ###
 class TestAPIPlayersPath(TestAPIBase):
     
-    @classmethod
+    # @classmethod
     def setup_class(cls):
         super().setup_class()
+        app.engine.db = MockDB()
         with MockSession(app.engine) as session:
             add_ratings(cls.games_by_player, session)
 
@@ -195,6 +195,7 @@ class TestAPIGamesPath(TestAPIBase):
     @classmethod
     def setup_class(cls):
         super().setup_class()
+        app.engine.db = MockDB()
         with MockSession(app.engine) as session:
             add_ratings(cls.games_by_player, session)
     
