@@ -155,7 +155,7 @@ def update_player_rating(
     """
     game = game.capitalize()
     player_name = player_name.capitalize()
-    player_to_ratings = {}
+    updated_rating_entry = {}
 
     with Session(app.engine) as session:
         ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
@@ -165,12 +165,13 @@ def update_player_rating(
         
         ratings[0].rating = rating
         session.commit()
-        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+        updated_rating_entry[game] = ratings[0].rating
+        # player_ratings = session.query(Rating).filter_by(player=player_name).all()
             
-        for rating in player_ratings:
-            player_to_ratings[rating.game] = rating.rating
+        # for rating in player_ratings:
+        #     player_to_ratings[rating.game] = rating.rating
 
-    return PlayerEntry(name=player_name, games= player_to_ratings)
+    return PlayerEntry(name=player_name, games=updated_rating_entry)
 
 @app.post("/api/games/{game}/{player_name}", response_model = PlayerEntry, status_code=201)
 def add_game_rating(
@@ -184,23 +185,25 @@ def add_game_rating(
     """
     game = game.capitalize()
     player_name = player_name.capitalize()
-    player_to_ratings = {}
+    updated_rating_entry = {}
 
     with Session(app.engine) as session:      
         try:
-            rating = Rating(player=player_name, game=game, rating=rating)
-            session.add(rating)
+            new_rating = Rating(player=player_name, game=game, rating=rating)
+            session.add(new_rating)
             session.commit()
         except IntegrityError:
             session.rollback()
             raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}.")
 
-        player_ratings = session.query(Rating).filter_by(player=player_name).all()
+        # player_ratings = session.query(Rating).filter_by(player=player_name).all()
             
-        for rating in player_ratings:
-            player_to_ratings[rating.game] = rating.rating
+        # for rating in player_ratings:
+        #     player_to_ratings[rating.game] = rating.rating
+        updated_rating_entry[game] = rating
 
-    return PlayerEntry(name=player_name, games=player_to_ratings)
+
+    return PlayerEntry(name=player_name, games=updated_rating_entry)
 
 @app.delete("/api/games/{game}/{player_name}", response_model = PlayerEntry)
 def delete_game_rating(
