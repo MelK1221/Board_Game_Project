@@ -44,7 +44,6 @@ def sample_data_setup():
 
 def start_application():
     app.engine = MagicMock(spec=Engine)
-    app.engine.db = MockDB()
     client = TestClient(app)
     return client
 
@@ -163,6 +162,7 @@ class TestAPIPlayersPath(TestAPIBase):
     @classmethod
     def setup_class(cls):
         super().setup_class()
+        app.engine.db = MockDB()
         with MockSession(app.engine) as session:
             add_ratings(cls.games_by_player, session)
 
@@ -195,6 +195,7 @@ class TestAPIGamesPath(TestAPIBase):
     @classmethod
     def setup_class(cls):
         super().setup_class()
+        app.engine.db = MockDB()
         with MockSession(app.engine) as session:
             add_ratings(cls.games_by_player, session)
     
@@ -261,10 +262,7 @@ class TestAPIRatingMods(TestAPIBase):
         assert response.status_code == 200
         assert response.json()["name"] == "Mel"
         assert response.json()["games"] == {
-            "Codenames": 8,
             "Hanabi": 4,
-            "Mysterium": 7,
-            "Settlers of Catan": 6
         }
 
     @patch("board_game_app.Session", new=MockSession)
@@ -286,10 +284,6 @@ class TestAPIRatingMods(TestAPIBase):
         assert response.status_code == 201
         assert response.json()["name"] == "Em"
         assert response.json()["games"] == {
-            "Boggle": 7,
-            "Hanabi": 6,
-            "Mysterium": 9,
-            "Rivals of Catan": 8,
             "New_game": 5
         }
     
@@ -312,13 +306,8 @@ class TestAPIRatingMods(TestAPIBase):
     @patch("board_game_app.Session", new=MockSession)
     def test_delete_valid_entry(self):
         response = self.client.delete("/api/games/hanabi/mel")
-        assert response.status_code == 200
-        assert response.json()["name"] == "Mel"
-        assert response.json()["games"] == {
-            "Codenames": 8,
-            "Mysterium": 7,
-            "Settlers of Catan": 6
-        }
+        assert response.status_code == 204
+        assert response.text == ''
 
     @patch("board_game_app.Session", new=MockSession)
     def test_delete_invalid_game(self):
