@@ -159,7 +159,7 @@ class TestSupportingFuncs:
 ### Test API Get Endpoints ###
 class TestAPIPlayersPath(TestAPIBase):
     
-    # @classmethod
+    @classmethod
     def setup_class(cls):
         super().setup_class()
         app.engine.db = MockDB()
