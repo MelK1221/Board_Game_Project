@@ -1,3 +1,7 @@
+import pytest
+import json
+
+from jsonschema import validate, ValidationError
 from sqlalchemy import Engine
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.exc import IntegrityError
@@ -6,7 +10,7 @@ from fastapi.testclient import TestClient
 from pytest import mark
 from unittest.mock import patch, MagicMock
 
-from board_game_app import add_ratings, create_games_by_player, app
+from board_game_app import add_ratings, parse_players_file, create_games_by_player, app
 
 
 ### Setup Test Data ###
@@ -135,6 +139,11 @@ class TestAPIBase:
 ### Test Supporting Funtions ###
 class TestSupportingFuncs:
 
+    @classmethod
+    def setup_class(cls):
+        with open("ratings_schema.json") as schema_file:
+            cls.schema = json.load(schema_file)
+
     def setup_method(self, method):
         self.games_data = sample_data_setup()
 
@@ -154,6 +163,66 @@ class TestSupportingFuncs:
                 "Settlers of Catan": 6
                 }
             }
+        
+    def test_valid_schema(self):
+        validate(instance=self.games_data, schema=self.schema)
+
+    def test_schema_invalid_name_type(self):
+        test_data = [
+            {
+                "name": 123,
+                "games": {
+                    "Boggle": 7,
+                    }
+            }
+        ]
+        with pytest.raises(ValidationError):
+            validate(instance=test_data, schema=self.schema)
+
+    def test_schema_invalid_game_type(self):
+        test_data = [
+            {
+                "name": "Em",
+                "games": {
+                    123: 7,
+                    }
+            }
+        ]
+        with pytest.raises(ValidationError):
+            validate(instance=test_data, schema=self.schema)
+
+    def test_schema_invalid_rating(self):
+        test_data = [
+            {
+                "name": "Em",
+                "games": {
+                    "Boggle": 11,
+                    }
+            }
+        ]
+        with pytest.raises(ValidationError):
+            validate(instance=test_data, schema=self.schema)  
+
+
+    def test_schema_missing_field(self):
+        test_data = [
+            {
+                "name": "Em",
+            }
+        ]
+        with pytest.raises(ValidationError):
+            validate(instance=test_data, schema=self.schema)
+
+    def test_schema_no_games(self):
+        test_data = [
+            {
+                "name": "Em",
+                "games": {}
+            }
+        ]
+        with pytest.raises(ValidationError):
+            validate(instance=test_data, schema=self.schema)
+        
         
 
 ### Test API Get Endpoints ###
