@@ -20,11 +20,13 @@ from sqlalchemy import create_engine, Engine, Column, Integer, String, UniqueCon
 from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.exc import IntegrityError
+from jsonschema import validate, ValidationError
 
 DB_USER = "app"
 DB_HOST = "127.0.0.1"
 DB_NAME = "board_games"
 DB_PASSWORD_FILE = "password.txt"
+SCHEMA_FILE = "ratings_schema.json"
 from pydantic import BaseModel
 
 
@@ -275,17 +277,20 @@ def parse_players_file(filename, ext) -> list:
     players_games_list = []
 
     # Check for csv or json file type
-    if (ext != ".csv") and (ext != ".json"):
+    if (ext != ".json"):
         msg = "Sorry, this file type is not accepted. No new player info entered into database."
         raise ValueError(msg)
     
+    # Open and save ratings schema for validation
+    with open(SCHEMA_FILE) as schema_file:
+        schema = json.load(schema_file)
+
     # Open file and create new players dict
     with open(filename) as upload_file:
-        if ext == ".csv":
-            csvreader = csv.DictReader(upload_file)
-            players_list = [row for row in csvreader]               
-        else:
-            players_list = json.load(upload_file)
+        players_list = json.load(upload_file)
+
+        # Check for valid file schema
+        validate(instance=players_list, schema=schema)
 
         for person_dict in players_list:
             person_dict["name"] = person_dict["name"].capitalize()
@@ -364,7 +369,7 @@ if __name__ == "__main__":
     engine = connect_to_database()
     try:
         run(engine, args)
-    except (FileNotFoundError, PlayerNotFoundError, ValueError) as e:
+    except (FileNotFoundError, PlayerNotFoundError, ValueError, ValidationError) as e:
         print(e)
     finally:
         shutdown(engine)
