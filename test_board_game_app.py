@@ -173,7 +173,7 @@ class TestSupportingFuncs:
                 "name": 123,
                 "games": {
                     "Boggle": 7,
-                    }
+                }
             }
         ]
         with pytest.raises(ValidationError):
@@ -185,7 +185,7 @@ class TestSupportingFuncs:
                 "name": "Em",
                 "games": {
                     123: 7,
-                    }
+                }
             }
         ]
         with pytest.raises(ValidationError):
@@ -197,7 +197,7 @@ class TestSupportingFuncs:
                 "name": "Em",
                 "games": {
                     "Boggle": 11,
-                    }
+                }
             }
         ]
         with pytest.raises(ValidationError):
