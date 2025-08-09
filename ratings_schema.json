@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["name", "games"],
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "games": {
+        "type": "object",
+        "minProperties": 1,
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "additionalProperties": false
+  }
+}

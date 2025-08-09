@@ -6,3 +6,4 @@ uvicorn==0.23.2
 sqlalchemy==2.0.41
 sqlalchemy-utils==0.41.2
 psycopg2==2.9.10
+jsonschema==4.25.0
