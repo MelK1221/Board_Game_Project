@@ -1,7 +1,7 @@
 [
    {
       "name": "Em",
-      "games": {
+      "puzzles": {
          "Boggle": 7,
          "Hanabi": 6,
          "Mysterium": 9,
@@ -10,7 +10,7 @@
    },
    {
       "name": "Mel",
-      "games": {
+      "puzzles": {
          "Codenames": 8,
          "Hanabi": 8,
          "Mysterium": 7,
@@ -19,7 +19,7 @@
    },
    {
       "name": "Sarah",
-      "games": {
+      "puzzles": {
          "Hanabi": 10,
          "Herd Mentality": 8,
          "Mysterium": 9,
@@ -28,7 +28,7 @@
    },
    {
       "name": "Mike",
-      "games": {
+      "puzzles": {
          "Stratego": 8,
          "Risk": 9,
          "Monopoly": 5
@@ -36,7 +36,7 @@
    },
    {
       "name": "Laurie",
-      "games": {
+      "puzzles": {
          "Codenames": 6,
          "Boggle": 7,
          "Rummy": 10

@@ -3,12 +3,12 @@
   "type": "array",
   "items": {
     "type": "object",
-    "required": ["name", "games"],
+    "required": ["name", "puzzles"],
     "properties": {
       "name": {
         "type": "string"
       },
-      "games": {
+      "puzzles": {
         "type": "object",
         "minProperties": 1,
         "propertyNames": {

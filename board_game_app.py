@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Entry point python file to start Board Game Project.
+Entry point python file to start Puzzles Project.
 
 Authors: Emily Vaughn-Kukura and Melanie Kukura
 """
@@ -24,7 +24,7 @@ from jsonschema import validate, ValidationError
 
 DB_USER = "app"
 DB_HOST = "127.0.0.1"
-DB_NAME = "board_games"
+DB_NAME = "puzzles"
 DB_PASSWORD_FILE = "password.txt"
 SCHEMA_FILE = "ratings_schema.json"
 from pydantic import BaseModel
@@ -35,7 +35,7 @@ ALL="all"
 class PlayerEntry(BaseModel):
     """Pydantic response model for API patch/post/delete methods"""
     name: str
-    games: Dict[str, int]
+    puzzles: Dict[str, int]
 
 class PlayerNotFoundError(Exception):
     """Custom exception for player not found."""
@@ -53,17 +53,17 @@ class Rating(Base):
 
     id = Column(Integer, primary_key=True)
     player = Column(String, nullable=False)
-    game = Column(String, nullable=False)
+    puzzle = Column(String, nullable=False)
     rating = Column(Integer, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("player", "game", name="player-and-game"),
+        UniqueConstraint("player", "puzzle", name="player-and-puzzle"),
     )
 
 ### Fast API Application ###
 app = FastAPI(
-    title="Board Games API",
-    summary="Kukura Family & Friends Board Game Ratings",
+    title="Puzzles  API",
+    summary="Kukura Family & Friends Puzzle Ratings",
     version="1",
     servers=[{"url": "/"}],
 )
@@ -79,13 +79,13 @@ def favicon():
 ### API endpoints ###
 @app.get("/api/players/")
 def get_players():
-    games_by_player = defaultdict(dict)
+    puzzles = defaultdict(dict)
     with Session(app.engine) as session:
         ratings = session.query(Rating).all()
         for rating in ratings:
-            games_by_player[rating.player].update({rating.game: rating.rating})
+            puzzles[rating.player].update({rating.puzzle: rating.rating})
 
-    return games_by_player
+    return puzzles
 
 
 @app.get("/api/players/{player_name}")
@@ -98,124 +98,124 @@ def get_player(player_name: str):
             raise HTTPException(status_code=404, detail=f"Player {player_name} not found.")
         
         for rating in player_ratings:
-            player_to_ratings[rating.game] = rating.rating
+            player_to_ratings[rating.puzzle] = rating.rating
 
     return player_to_ratings
 
 
-@app.get("/api/games/")
-def get_games():
-    games = []
+@app.get("/api/puzzles/")
+def get_puzzles():
+    puzzles = []
     with Session(app.engine) as session:
-        game_results = session.query(Rating.game).distinct().all()
+        puzzle_results = session.query(Rating.puzzle).distinct().all()
         # When you query a single attribute you still get back a tuple (1-tuple)
-        # For example: game_results =[('Ticket to ride',), ('Risk',), ...]
-        games = [game[0] for game in game_results]
+        # For example: puzzle_results =[('Ticket to ride',), ('Risk',), ...]
+        puzzles = [puzzle[0] for puzzle in puzzle_results]
 
-    return games
+    return puzzles
 
 
-@app.get("/api/games/{game}")
-def get_game_ratings(game: str):
-    game = game.capitalize()
+@app.get("/api/puzzles/{puzzle}")
+def get_puzzle_ratings(puzzle: str):
+    puzzle = puzzle.capitalize()
     player_ratings = {}
 
     with Session(app.engine) as session:  
-        game_ratings = session.query(Rating).filter_by(game=game).all()
-        if not game_ratings:
-            raise HTTPException(status_code=404, detail=f"Game {game} not found.")
+        puzzle_ratings = session.query(Rating).filter_by(puzzle=puzzle).all()
+        if not puzzle_ratings:
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not found.")
 
-        for rating in game_ratings:
+        for rating in puzzle_ratings:
             player_ratings[rating.player] = rating.rating
 
     return player_ratings
 
 
-@app.get("/api/games/{game}/{player_name}")
-def get_player_rating(game: str, player_name: str):
+@app.get("/api/puzzles/{puzzle}/{player_name}")
+def get_player_rating(puzzle: str, player_name: str):
     player_name = player_name.capitalize()
-    game = game.capitalize()
+    puzzle = puzzle.capitalize()
     rating = None
     with Session(app.engine) as session:  
-        ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
+        ratings = session.query(Rating).filter_by(puzzle=puzzle, player=player_name).all()
         if not ratings:
-            raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {player_name}.")
 
     rating = ratings[0].rating
 
     return rating
 
-@app.patch("/api/games/{game}/{player_name}", response_model = PlayerEntry)
+@app.patch("/api/puzzles/{puzzle}/{player_name}", response_model = PlayerEntry)
 def update_player_rating(
-    game: str,
+    puzzle: str,
     player_name: str,
     rating: int
 ):
     """
-    Update rating of existing game in database.
-    Returns dict of player whose game rating was updated.
+    Update rating of existing puzzle in database.
+    Returns dict of player whose puzzle rating was updated.
     """
-    game = game.capitalize()
+    puzzle = puzzle.capitalize()
     player_name = player_name.capitalize()
     updated_rating_entry = {}
 
     with Session(app.engine) as session:
-        ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
+        ratings = session.query(Rating).filter_by(puzzle=puzzle, player=player_name).all()
 
         if not ratings:
-            raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {player_name}.")
         
         ratings[0].rating = rating
         session.commit()
-        updated_rating_entry[game] = ratings[0].rating
+        updated_rating_entry[puzzle] = ratings[0].rating
 
-    return PlayerEntry(name=player_name, games=updated_rating_entry)
+    return PlayerEntry(name=player_name, puzzles=updated_rating_entry)
 
-@app.post("/api/games/{game}/{player_name}", response_model = PlayerEntry, status_code=201)
-def add_game_rating(
-    game: str,
+@app.post("/api/puzzles/{puzzle}/{player_name}", response_model = PlayerEntry, status_code=201)
+def add_puzzle_rating(
+    puzzle: str,
     player_name: str,
     rating: int
 ):
     """"
-    Create new rated game entry.
+    Create new rated puzzle entry.
     Returns dict of player new entry added to.
     """
-    game = game.capitalize()
+    puzzle = puzzle.capitalize()
     player_name = player_name.capitalize()
     updated_rating_entry = {}
 
     with Session(app.engine) as session:      
         try:
-            new_rating = Rating(player=player_name, game=game, rating=rating)
+            new_rating = Rating(player=player_name, puzzle=puzzle, rating=rating)
             session.add(new_rating)
             session.commit()
         except IntegrityError:
             session.rollback()
-            raise HTTPException(status_code=409, detail=f"Game {game} has already been rated by {player_name}.")
+            raise HTTPException(status_code=409, detail=f"Puzzle {puzzle} has already been rated by {player_name}.")
 
-        updated_rating_entry[game] = rating
+        updated_rating_entry[puzzle] = rating
 
 
-    return PlayerEntry(name=player_name, games=updated_rating_entry)
+    return PlayerEntry(name=player_name, puzzles=updated_rating_entry)
 
-@app.delete("/api/games/{game}/{player_name}", status_code=204)
-def delete_game_rating(
-    game: str,
+@app.delete("/api/puzzles/{puzzle}/{player_name}", status_code=204)
+def delete_puzzle_rating(
+    puzzle: str,
     player_name: str
 ):
     """
-    Delete rated game from player entry.
-    Returns dict of player game rating deleted from.
+    Delete rated puzzle from player entry.
+    Returns dict of player puzzle rating deleted from.
     """
-    game = game.capitalize()
+    puzzle = puzzle.capitalize()
     player_name = player_name.capitalize()
     player_to_ratings = {}
 
     with Session(app.engine) as session:
-        ratings = session.query(Rating).filter_by(game=game, player=player_name).all()
+        ratings = session.query(Rating).filter_by(puzzle=puzzle, player=player_name).all()
         if not ratings:
-            raise HTTPException(status_code=404, detail=f"Game {game} not rated by {player_name}.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {player_name}.")
             
         session.delete(ratings[0])
         session.commit()
@@ -236,29 +236,29 @@ def connect_to_database() -> Engine:
     return engine
 
 
-def ensure_game_database(engine: Engine):
+def ensure_puzzle_database(engine: Engine):
     if not database_exists(engine.url):
         create_database(engine.url)
         print(f"Initialized database {DB_NAME}")
 
 
-def add_ratings(games_by_player: Dict, session: Session):
-    for player, game_ratings in games_by_player.items():
-        for game, value in game_ratings.items():
-            rating = Rating(player=player, game=game, rating=value)
+def add_ratings(puzzles_by_player: Dict, session: Session):
+    for player, puzzle_ratings in puzzles_by_player.items():
+        for puzzle, value in puzzle_ratings.items():
+            rating = Rating(player=player, puzzle=puzzle, rating=value)
             session.add(rating)
 
 
-def initialize_ratings_table(engine, games_by_player: dict):
+def initialize_ratings_table(engine, puzzles_by_player: dict):
     """
-    Initialize table in db from the `games_by_player` mapping
-    games_by_player maps player_name -> {game -> rating}
+    Initialize table in db from the `puzzles_by_player` mapping
+    puzzles_by_player maps player_name -> {puzzle -> rating}
     """
     # Ensure table exists
     Base.metadata.create_all(engine)
 
     with Session(engine) as session:
-        add_ratings(games_by_player, session)
+        add_ratings(puzzles_by_player, session)
 
         try:
             session.commit()
@@ -270,11 +270,11 @@ def initialize_ratings_table(engine, games_by_player: dict):
 def parse_players_file(filename, ext) -> list:
     """
     Returns dict created from loaded file.
-    Key -> Player, Value -> Fav games list.
+    Key -> Player, Value -> Fav puzzles list.
     Returns empty dict if filename is improper.
     """
 
-    players_games_list = []
+    players_puzzles_list = []
 
     # Check for csv or json file type
     if (ext != ".json"):
@@ -294,51 +294,51 @@ def parse_players_file(filename, ext) -> list:
 
         for person_dict in players_list:
             person_dict["name"] = person_dict["name"].capitalize()
-            person_dict["games"] = {game.capitalize(): rating for game, rating in person_dict["games"].items()}
-            players_games_list.append(person_dict)
+            person_dict["puzzles"] = {puzzle.capitalize(): rating for puzzle, rating in person_dict["puzzles"].items()}
+            players_puzzles_list.append(person_dict)
             
-        return players_games_list
+        return players_puzzles_list
 
 
-def create_games_by_player(players_games_list):
+def create_puzzles_by_player(players_puzzles_list):
     """
     Create dict of players and rated
-    games keyed by player.
+    puzzles keyed by player.
     """
     
-    games_by_player = {}
-    for player in players_games_list:
-        games_by_player[player["name"]] = player["games"]
+    puzzles_by_player = {}
+    for player in players_puzzles_list:
+        puzzles_by_player[player["name"]] = player["puzzles"]
     
-    return games_by_player
+    return puzzles_by_player
 
 
 ### Main application loop ###
 def run(engine: Engine, args: argparse.Namespace):
 
-    ensure_game_database(engine)
+    ensure_puzzle_database(engine)
 
-    players_games_list = []
+    players_puzzles_list = []
 
     # Check for existence of path
     if os.path.exists(args.file):
         _, extension = os.path.splitext(args.file)
-        players_games_list = parse_players_file(args.file, extension)
+        players_puzzles_list = parse_players_file(args.file, extension)
     else:
         raise FileNotFoundError(f"File not found: {args.file}")
     
     # Check if players exist in dict
-    if not players_games_list:
+    if not players_puzzles_list:
         msg = "No players found in provided file."
         raise ValueError(msg)
     
     # Create different maps for endpoint access
-    games_by_player = create_games_by_player(players_games_list)
+    puzzles_by_player = create_puzzles_by_player(players_puzzles_list)
 
     # Database connection
     app.engine = engine
 
-    initialize_ratings_table(engine, games_by_player)
+    initialize_ratings_table(engine, puzzles_by_player)
 
     # Start server
     uvicorn.run(app, host="localhost", port=args.port)
@@ -356,7 +356,7 @@ def parse_args() -> argparse.Namespace:
 
     # Add arguments
     parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
-    parser.add_argument("-f","--file",  default="example_files/fam_fav_games.json", help="Player favorite games file")
+    parser.add_argument("-f","--file",  default="example_files/fam_fav_puzzles.json", help="Player favorite puzzles file")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
 
     # Parse arguments
