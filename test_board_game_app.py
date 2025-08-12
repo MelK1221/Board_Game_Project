@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from pytest import mark
 from unittest.mock import patch, MagicMock
 
-from board_game_app import add_ratings, parse_players_file, create_games_by_player, app
+from board_game_app import add_ratings, create_puzzles_by_player, app
 
 
 ### Setup Test Data ###
@@ -19,32 +19,32 @@ def sample_data_setup():
     """
     Setup sample data to use in tests
     """
-    em_games = {
+    em_puzzles = {
             "Boggle": 7,
             "Hanabi": 6,
             "Mysterium": 9,
             "Rivals of Catan": 8
         }
 
-    mel_games = {
+    mel_puzzles = {
             "Codenames": 8,
             "Hanabi": 8,
             "Mysterium": 7,
             "Settlers of Catan": 6
         }
 
-    games_data = [
+    puzzles_data = [
         {
             "name": "Em",
-            "games": em_games
+            "puzzles": em_puzzles
         },
         {
             "name": "Mel",
-            "games": mel_games
+            "puzzles": mel_puzzles
         }
     ]
 
-    return games_data
+    return puzzles_data
 
 def start_application():
     app.engine = MagicMock(spec=Engine)
@@ -100,7 +100,7 @@ class MockSession:
     def add(self, entry):
         db = self._get_db()
         for rating in db.entries:
-            if rating.player == entry.player and rating.game == entry.game:
+            if rating.player == entry.player and rating.puzzle == entry.puzzle:
                 raise IntegrityError(statement=None, params=None, orig=Exception("Duplicate Entry"))
         db.entries.append(entry)
 
@@ -128,8 +128,8 @@ class MockSession:
 class TestAPIBase:
     @classmethod
     def setup_class(cls):
-        cls.games_data = sample_data_setup()
-        cls.games_by_player = create_games_by_player(cls.games_data)
+        cls.puzzles_data = sample_data_setup()
+        cls.puzzles_by_player = create_puzzles_by_player(cls.puzzles_data)
         cls.client = start_application()
 
     @classmethod
@@ -145,10 +145,10 @@ class TestSupportingFuncs:
             cls.schema = json.load(schema_file)
 
     def setup_method(self, method):
-        self.games_data = sample_data_setup()
+        self.puzzles_data = sample_data_setup()
 
-    def test_create_games_by_player(self):
-        res = create_games_by_player(players_games_list=self.games_data)
+    def test_create_puzzles_by_player(self):
+        res = create_puzzles_by_player(players_puzzles_list=self.puzzles_data)
         assert res == {
             "Em": {
                 "Boggle": 7,
@@ -165,13 +165,13 @@ class TestSupportingFuncs:
             }
         
     def test_valid_schema(self):
-        validate(instance=self.games_data, schema=self.schema)
+        validate(instance=self.puzzles_data, schema=self.schema)
 
     def test_schema_invalid_name_type(self):
         test_data = [
             {
                 "name": 123,
-                "games": {
+                "puzzles": {
                     "Boggle": 7,
                 }
             }
@@ -179,11 +179,11 @@ class TestSupportingFuncs:
         with pytest.raises(ValidationError):
             validate(instance=test_data, schema=self.schema)
 
-    def test_schema_invalid_game_type(self):
+    def test_schema_invalid_puzzles_type(self):
         test_data = [
             {
                 "name": "Em",
-                "games": {
+                "puzzles": {
                     123: 7,
                 }
             }
@@ -195,7 +195,7 @@ class TestSupportingFuncs:
         test_data = [
             {
                 "name": "Em",
-                "games": {
+                "puzzles": {
                     "Boggle": 11,
                 }
             }
@@ -213,11 +213,11 @@ class TestSupportingFuncs:
         with pytest.raises(ValidationError):
             validate(instance=test_data, schema=self.schema)
 
-    def test_schema_no_games(self):
+    def test_schema_no_puzzles(self):
         test_data = [
             {
                 "name": "Em",
-                "games": {}
+                "puzzles": {}
             }
         ]
         with pytest.raises(ValidationError):
@@ -233,13 +233,13 @@ class TestAPIPlayersPath(TestAPIBase):
         super().setup_class()
         app.engine.db = MockDB()
         with MockSession(app.engine) as session:
-            add_ratings(cls.games_by_player, session)
+            add_ratings(cls.puzzles_by_player, session)
 
     @patch("board_game_app.Session", new=MockSession)
     def test_get_players(self):
         response = self.client.get("/api/players")
         assert response.status_code == 200
-        assert response.json() == self.games_by_player
+        assert response.json() == self.puzzles_by_player
 
     @patch("board_game_app.Session", new=MockSession)
     def test_get_player(self):
@@ -266,11 +266,11 @@ class TestAPIGamesPath(TestAPIBase):
         super().setup_class()
         app.engine.db = MockDB()
         with MockSession(app.engine) as session:
-            add_ratings(cls.games_by_player, session)
+            add_ratings(cls.puzzles_by_player, session)
     
     @patch("board_game_app.Session", new=MockSession)
-    def test_get_games(self):
-        response = self.client.get("/api/games")
+    def test_get_puzzles(self):
+        response = self.client.get("/api/puzzles")
         assert response.status_code == 200
         assert sorted(response.json()) == sorted([
             "Boggle",
@@ -282,8 +282,8 @@ class TestAPIGamesPath(TestAPIBase):
         ])
 
     @patch("board_game_app.Session", new=MockSession)
-    def test_get_game_ratings(self):
-        response = self.client.get("/api/games/hanabi")
+    def test_get_puzzle_ratings(self):
+        response = self.client.get("/api/puzzles/hanabi")
         assert response.status_code == 200
         assert response.json() == {
             "Em": 6,
@@ -291,28 +291,28 @@ class TestAPIGamesPath(TestAPIBase):
         }
 
     @patch("board_game_app.Session", new=MockSession)
-    def test_get_game_ratings_invalid_game(self):
-        response = self.client.get("/api/games/zelda")
+    def test_get_puzzle_ratings_invalid_puzzle(self):
+        response = self.client.get("/api/puzzles/zelda")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Game Zelda not found."}
+        assert response.json() == {"detail": "Puzzle Zelda not found."}
 
     @patch("board_game_app.Session", new=MockSession)
     def test_get_player_rating(self):
-        response = self.client.get("/api/games/hanabi/mel")
+        response = self.client.get("/api/puzzles/hanabi/mel")
         assert response.status_code == 200
         assert response.json() == 8
 
     @patch("board_game_app.Session", new=MockSession)
     def test_get_player_rating_invalid_name(self):
-        response = self.client.get("/api/games/hanabi/bad")
+        response = self.client.get("/api/puzzles/hanabi/bad")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Game Hanabi not rated by Bad."}
+        assert response.json() == {"detail": "Puzzle Hanabi not rated by Bad."}
 
     @patch("board_game_app.Session", new=MockSession)
-    def test_get_player_rating_invalid_game(self):
-        response = self.client.get("/api/games/zelda/em")
+    def test_get_player_rating_invalid_puzzle(self):
+        response = self.client.get("/api/puzzles/zelda/em")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Game Zelda not rated by Em."}
+        assert response.json() == {"detail": "Puzzle Zelda not rated by Em."}
   
 
 # Test patch/post/delete methods
@@ -321,71 +321,71 @@ class TestAPIRatingMods(TestAPIBase):
     def setup_method(self, method):
         app.engine.db = MockDB()
         with MockSession(app.engine) as session:
-            add_ratings(self.games_by_player, session)
+            add_ratings(self.puzzles_by_player, session)
 
 
     # ============ Test Patch Methods =============
     @patch("board_game_app.Session", new=MockSession)
     def test_patch_valid_update(self):
-        response = self.client.patch("/api/games/hanabi/mel?rating=4")
+        response = self.client.patch("/api/puzzles/hanabi/mel?rating=4")
         assert response.status_code == 200
         assert response.json()["name"] == "Mel"
-        assert response.json()["games"] == {
+        assert response.json()["puzzles"] == {
             "Hanabi": 4,
         }
 
     @patch("board_game_app.Session", new=MockSession)
     def test_patch_invalid_name(self):
-        response = self.client.patch("/api/games/hanabi/bad?rating=4")
+        response = self.client.patch("/api/puzzles/hanabi/bad?rating=4")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Game Hanabi not rated by Bad."}
+        assert response.json() == {"detail": "Puzzle Hanabi not rated by Bad."}
 
     @patch("board_game_app.Session", new=MockSession)
-    def test_patch_invalid_game(self):
-        response = self.client.patch("/api/games/bad/mel?rating=4")
+    def test_patch_invalid_puzzle(self):
+        response = self.client.patch("/api/puzzles/bad/mel?rating=4")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Game Bad not rated by Mel."}
+        assert response.json() == {"detail": "Puzzle Bad not rated by Mel."}
 
     # ============ Test Post Methods =============
     @patch("board_game_app.Session", new=MockSession)
-    def test_post_game_added(self):
-        response = self.client.post("/api/games/new_game/em?rating=5")
+    def test_post_puzzle_added(self):
+        response = self.client.post("/api/puzzles/new_puzzle/em?rating=5")
         assert response.status_code == 201
         assert response.json()["name"] == "Em"
-        assert response.json()["games"] == {
-            "New_game": 5
+        assert response.json()["puzzles"] == {
+            "New_puzzle": 5
         }
     
     @patch("board_game_app.Session", new=MockSession)
     def test_post_player_added(self):
-        response = self.client.post("/api/games/hanabi/new_player?rating=5")
+        response = self.client.post("/api/puzzles/hanabi/new_player?rating=5")
         assert response.status_code == 201
         assert response.json()["name"] == "New_player"
-        assert response.json()["games"] == {
+        assert response.json()["puzzles"] == {
             "Hanabi": 5
         }
 
     @patch("board_game_app.Session", new=MockSession)
     def test_post_entry_exists(self):
-        response = self.client.post("/api/games/hanabi/em?rating=5")
+        response = self.client.post("/api/puzzles/hanabi/em?rating=5")
         assert response.status_code == 409
-        assert response.json() == {"detail": "Game Hanabi has already been rated by Em."}
+        assert response.json() == {"detail": "Puzzle Hanabi has already been rated by Em."}
 
     # ============ Test Delete Methods =============
     @patch("board_game_app.Session", new=MockSession)
     def test_delete_valid_entry(self):
-        response = self.client.delete("/api/games/hanabi/mel")
+        response = self.client.delete("/api/puzzles/hanabi/mel")
         assert response.status_code == 204
         assert response.text == ''
 
     @patch("board_game_app.Session", new=MockSession)
-    def test_delete_invalid_game(self):
-        response = self.client.delete("/api/games/bad/mel")
+    def test_delete_invalid_puzzle(self):
+        response = self.client.delete("/api/puzzles/bad/mel")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Game Bad not rated by Mel."}
+        assert response.json() == {"detail": "Puzzle Bad not rated by Mel."}
 
     @patch("board_game_app.Session", new=MockSession)
     def test_delete_invalid_name(self):
-        response = self.client.delete("/api/games/hanabi/bad")
+        response = self.client.delete("/api/puzzles/hanabi/bad")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Game Hanabi not rated by Bad."}
+        assert response.json() == {"detail": "Puzzle Hanabi not rated by Bad."}
