@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+{% endblock %}
+
+{% block title %}Games{% endblock %}
+
+{% block content %}
+
+<h1>Games</h1>
+
+<table id="games" class="display" style="width:100%">
+    <thead>
+        <tr>
+            <th class="all"></th>
+            <th class="all">Game</th>
+            <th class="all">Actions</th>
+        </tr>
+    </thead>
+</table>
+
+
+<script>
+
+$(document).keypress(function(e) {
+    if (e.keycode == 13 || e.which == 13) {
+        // no buttons expect for positive buttons on modal
+        // have ids: ui primary positive button
+        $('.ui.primary.positive.button').click();
+    }
+});
+
+$(document).ready(function() {
+
+    let games_table = $('#games').DataTable({
+        "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        "iDisplayLength": -1,
+        "ajax": "{{ request.url_for('api_games') }}",
+        "columns": [
+            {
+                "width": "80%",
+                "data": "id",
+                "render": function(data, type, row) {
+                    let res = row.id;
+                    return res
+                }
+            },
+            {
+                "width": "20%",
+                "class": "dt-body-left dimmable",
+                "render": function(data, type, row) {
+                    let res = "";
+                    if (row.ssh_cmd) {
+                        res += "<div class='mini ui icon button ssh-cmd-button' data-tooltip='Copy SSH command to clipboard'><i class='terminal icon'></i></div>";
+                    }
+                    return res
+                }
+            }
+        ],
+        "order": [[1, "desc"]],
+    });
+
+    function register_button_callbacks() {
+        let deployment_entry = $('#deployments tbody');
+
+        deployment_entry.on('click', '.ssh-cmd-button', function () {
+            let data = deployments_table.row($(this).parents('tr')).data();
+            navigator.clipboard.writeText(data.ssh_cmd);
+        });
+    }
+
+    register_button_callbacks();
+
+})
+
+</script>
+
+{% endblock %}
