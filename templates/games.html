@@ -36,7 +36,7 @@ $(document).ready(function() {
     let games_table = $('#games').DataTable({
         "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
         "iDisplayLength": -1,
-        "ajax": "{{ request.url_for('api_games') }}",
+        "ajax": "{{ request.url_for('get_games') }}",
         "columns": [
             {
                 "width": "80%",

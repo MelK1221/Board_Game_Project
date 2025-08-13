@@ -5,6 +5,7 @@ Entry point python file to start Board Game Project.
 Authors: Emily Vaughn-Kukura and Melanie Kukura
 """
 import argparse
+import datetime
 import json
 import os
 from collections import defaultdict
@@ -70,6 +71,7 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["now"] = datetime.datetime.now
 
 ### UI routes ### 
 @app.get("/", response_class=HTMLResponse)

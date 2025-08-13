@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 {% macro nav_link(endpoint, text) %}
     {% if request.endpoint is not none %}
-        {% if request.endpoint.endswith(endpoint) %}
+        {% if request.scope["endpoint"].__name__.endswith(endpoint) %}
         <a class="active item" href="{{ request.url_for(endpoint) }}">{{ text }}</a>
         {% else %}
         <a class="item" href="{{ request.url_for(endpoint) }}">{{ text }}</a>
@@ -26,8 +26,8 @@
     <script type="text/javascript" src="https://unpkg.com/vis-network@8.3.2/dist/vis-network.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.0.4/jsoneditor.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.0.4/jsoneditor.min.css">
-    <link rel="stylesheet" href="{{ request.url_for('static', filename='css/main.css') }}">
-    <link rel="shortcut icon" href="{{ request.url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="shortcut icon" href="/static/favicon.ico">
     <title>{% block title %}{% endblock %}</title>
 {% endblock %}
 </head>
@@ -35,8 +35,8 @@
 <body id="container">
 <div id="header">
 <div class="ui visible sidebar inverted vertical borderless menu">
-    <img id="logo" src="{{ request.url_for('static', filename='puzzle.png') }}" alt="Fun Games" />
-    {{ m.nav_link('games', 'Games') }}
+    <img id="logo" src="/static/puzzle.png" alt="Fun Games" />
+    {{ nav_link('games', 'Games') }}
 
 </div>
 </div>
