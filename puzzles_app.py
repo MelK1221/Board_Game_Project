@@ -32,16 +32,16 @@ from pydantic import BaseModel
 
 ALL="all"
 
-class PersonEntry(BaseModel):
+class SolverEntry(BaseModel):
     """Pydantic response model for API patch/post/delete methods"""
     name: str
     puzzles: Dict[str, int]
 
-class PersonNotFoundError(Exception):
-    """Custom exception for person not found."""
-    def __init__(self, person_name):
-        self.person_name = person_name
-        self.message = f"Person {self.person_name} not found."
+class SolverNotFoundError(Exception):
+    """Custom exception for solver not found."""
+    def __init__(self, solver_name):
+        self.solver_name = solver_name
+        self.message = f"Solver {self.solver_name} not found."
         super().__init__(self.message)
 
 ### DB ###
@@ -52,12 +52,12 @@ class Rating(Base):
     __tablename__ = "ratings"
 
     id = Column(Integer, primary_key=True)
-    person = Column(String, nullable=False)
+    solver = Column(String, nullable=False)
     puzzle = Column(String, nullable=False)
     rating = Column(Integer, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("person", "puzzle", name="person-and-puzzle"),
+        UniqueConstraint("solver", "puzzle", name="solver-and-puzzle"),
     )
 
 ### Fast API Application ###
@@ -77,30 +77,30 @@ def favicon():
 
 
 ### API endpoints ###
-@app.get("/api/people/")
-def get_people():
+@app.get("/api/solvers/")
+def get_solvers():
     puzzles = defaultdict(dict)
     with Session(app.engine) as session:
         ratings = session.query(Rating).all()
         for rating in ratings:
-            puzzles[rating.person].update({rating.puzzle: rating.rating})
+            puzzles[rating.solver].update({rating.puzzle: rating.rating})
 
     return puzzles
 
 
-@app.get("/api/people/{person_name}")
-def get_person(person_name: str):
-    person_to_ratings = {}
-    person_name = person_name.title()
+@app.get("/api/solvers/{solver_name}")
+def get_solver(solver_name: str):
+    solver_to_ratings = {}
+    solver_name = solver_name.title()
     with Session(app.engine) as session:  
-        person_ratings = session.query(Rating).filter_by(person=person_name).all()
-        if not person_ratings:
-            raise HTTPException(status_code=404, detail=f"Person {person_name} not found.")
+        solver_ratings = session.query(Rating).filter_by(solver=solver_name).all()
+        if not solver_ratings:
+            raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found.")
         
-        for rating in person_ratings:
-            person_to_ratings[rating.puzzle] = rating.rating
+        for rating in solver_ratings:
+            solver_to_ratings[rating.puzzle] = rating.rating
 
-    return person_to_ratings
+    return solver_to_ratings
 
 
 @app.get("/api/puzzles/")
@@ -118,7 +118,7 @@ def get_puzzles():
 @app.get("/api/puzzles/{puzzle}")
 def get_puzzle_ratings(puzzle: str):
     puzzle = puzzle.title()
-    person_ratings = {}
+    solver_ratings = {}
 
     with Session(app.engine) as session:  
         puzzle_ratings = session.query(Rating).filter_by(puzzle=puzzle).all()
@@ -126,96 +126,96 @@ def get_puzzle_ratings(puzzle: str):
             raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not found.")
 
         for rating in puzzle_ratings:
-            person_ratings[rating.person] = rating.rating
+            solver_ratings[rating.solver] = rating.rating
 
-    return person_ratings
+    return solver_ratings
 
 
-@app.get("/api/puzzles/{puzzle}/{person_name}")
-def get_person_rating(puzzle: str, person_name: str):
-    person_name = person_name.title()
+@app.get("/api/puzzles/{puzzle}/{solver_name}")
+def get_solver_rating(puzzle: str, solver_name: str):
+    solver_name = solver_name.title()
     puzzle = puzzle.title()
     rating = None
     with Session(app.engine) as session:  
-        ratings = session.query(Rating).filter_by(puzzle=puzzle, person=person_name).all()
+        ratings = session.query(Rating).filter_by(puzzle=puzzle, solver=solver_name).all()
         if not ratings:
-            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {person_name}.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {solver_name}.")
 
     rating = ratings[0].rating
 
     return rating
 
-@app.patch("/api/puzzles/{puzzle}/{person_name}", response_model = PersonEntry)
-def update_person_rating(
+@app.patch("/api/puzzles/{puzzle}/{solver_name}", response_model = SolverEntry)
+def update_solver_rating(
     puzzle: str,
-    person_name: str,
+    solver_name: str,
     rating: int
 ):
     """
     Update rating of existing puzzle in database.
-    Returns dict of person whose puzzle rating was updated.
+    Returns dict of solver whose puzzle rating was updated.
     """
     puzzle = puzzle.title()
-    person_name = person_name.title()
+    solver_name = solver_name.title()
     updated_rating_entry = {}
 
     with Session(app.engine) as session:
-        ratings = session.query(Rating).filter_by(puzzle=puzzle, person=person_name).all()
+        ratings = session.query(Rating).filter_by(puzzle=puzzle, solver=solver_name).all()
 
         if not ratings:
-            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {person_name}.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {solver_name}.")
         
         ratings[0].rating = rating
         session.commit()
         updated_rating_entry[puzzle] = ratings[0].rating
 
-    return PersonEntry(name=person_name, puzzles=updated_rating_entry)
+    return SolverEntry(name=solver_name, puzzles=updated_rating_entry)
 
-@app.post("/api/puzzles/{puzzle}/{person_name}", response_model = PersonEntry, status_code=201)
+@app.post("/api/puzzles/{puzzle}/{solver_name}", response_model = SolverEntry, status_code=201)
 def add_puzzle_rating(
     puzzle: str,
-    person_name: str,
+    solver_name: str,
     rating: int
 ):
     """"
     Create new rated puzzle entry.
-    Returns dict of person new entry added to.
+    Returns dict of solver new entry added to.
     """
     puzzle = puzzle.title()
-    person_name = person_name.title()
+    solver_name = solver_name.title()
     updated_rating_entry = {}
 
     with Session(app.engine) as session:      
         try:
-            new_rating = Rating(person=person_name, puzzle=puzzle, rating=rating)
+            new_rating = Rating(solver=solver_name, puzzle=puzzle, rating=rating)
             session.add(new_rating)
             session.commit()
         except IntegrityError:
             session.rollback()
-            raise HTTPException(status_code=409, detail=f"Puzzle {puzzle} has already been rated by {person_name}.")
+            raise HTTPException(status_code=409, detail=f"Puzzle {puzzle} has already been rated by {solver_name}.")
 
         updated_rating_entry[puzzle] = rating
 
 
-    return PersonEntry(name=person_name, puzzles=updated_rating_entry)
+    return SolverEntry(name=solver_name, puzzles=updated_rating_entry)
 
-@app.delete("/api/puzzles/{puzzle}/{person_name}", status_code=204)
+@app.delete("/api/puzzles/{puzzle}/{solver_name}", status_code=204)
 def delete_puzzle_rating(
     puzzle: str,
-    person_name: str
+    solver_name: str
 ):
     """
-    Delete rated puzzle from person entry.
-    Returns dict of person puzzle rating deleted from.
+    Delete rated puzzle from solver entry.
+    Returns dict of solver puzzle rating deleted from.
     """
     puzzle = puzzle.title()
-    person_name = person_name.title()
-    person_to_ratings = {}
+    solver_name = solver_name.title()
+    solver_to_ratings = {}
 
     with Session(app.engine) as session:
-        ratings = session.query(Rating).filter_by(puzzle=puzzle, person=person_name).all()
+        ratings = session.query(Rating).filter_by(puzzle=puzzle, solver=solver_name).all()
         if not ratings:
-            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {person_name}.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {solver_name}.")
             
         session.delete(ratings[0])
         session.commit()
@@ -242,23 +242,23 @@ def ensure_puzzle_database(engine: Engine):
         print(f"Initialized database {DB_NAME}")
 
 
-def add_ratings(puzzles_by_person: Dict, session: Session):
-    for person, puzzle_ratings in puzzles_by_person.items():
+def add_ratings(puzzles_by_solver: Dict, session: Session):
+    for solver, puzzle_ratings in puzzles_by_solver.items():
         for puzzle, value in puzzle_ratings.items():
-            rating = Rating(person=person, puzzle=puzzle, rating=value)
+            rating = Rating(solver=solver, puzzle=puzzle, rating=value)
             session.add(rating)
 
 
-def initialize_ratings_table(engine, puzzles_by_person: dict):
+def initialize_ratings_table(engine, puzzles_by_solver: dict):
     """
-    Initialize table in db from the `puzzles_by_person` mapping
-    puzzles_by_person maps person_name -> {puzzle -> rating}
+    Initialize table in db from the `puzzles_by_solver` mapping
+    puzzles_by_solver maps solver_name -> {puzzle -> rating}
     """
     # Ensure table exists
     Base.metadata.create_all(engine)
 
     with Session(engine) as session:
-        add_ratings(puzzles_by_person, session)
+        add_ratings(puzzles_by_solver, session)
 
         try:
             session.commit()
@@ -267,50 +267,50 @@ def initialize_ratings_table(engine, puzzles_by_person: dict):
 
 
 ### Supporting functions ###
-def parse_people_file(filename, ext) -> list:
+def parse_solvers_file(filename, ext) -> list:
     """
     Returns dict created from loaded file.
-    Key -> Person, Value -> Fav puzzles list.
+    Key -> Solver, Value -> Fav puzzles list.
     Returns empty dict if filename is improper.
     """
 
-    people_puzzles_list = []
+    solvers_puzzles_list = []
 
     # Check for csv or json file type
     if (ext != ".json"):
-        msg = "Sorry, this file type is not accepted. No new person info entered into database."
+        msg = "Sorry, this file type is not accepted. No new solver info entered into database."
         raise ValueError(msg)
     
     # Open and save ratings schema for validation
     with open(SCHEMA_FILE) as schema_file:
         schema = json.load(schema_file)
 
-    # Open file and create new people dict
+    # Open file and create new solvers dict
     with open(filename) as upload_file:
-        people_list = json.load(upload_file)
+        solvers_list = json.load(upload_file)
 
         # Check for valid file schema
-        validate(instance=people_list, schema=schema)
+        validate(instance=solvers_list, schema=schema)
 
-        for person_dict in people_list:
-            person_dict["name"] = person_dict["name"].title()
-            person_dict["puzzles"] = {puzzle.title(): rating for puzzle, rating in person_dict["puzzles"].items()}
-            people_puzzles_list.append(person_dict)
+        for solver_dict in solvers_list:
+            solver_dict["name"] = solver_dict["name"].title()
+            solver_dict["puzzles"] = {puzzle.title(): rating for puzzle, rating in solver_dict["puzzles"].items()}
+            solvers_puzzles_list.append(solver_dict)
             
-        return people_puzzles_list
+        return solvers_puzzles_list
 
 
-def create_puzzles_by_person(people_puzzles_list):
+def create_puzzles_by_solver(solvers_puzzles_list):
     """
-    Create dict of people and rated
-    puzzles keyed by person.
+    Create dict of solvers and rated
+    puzzles keyed by solver.
     """
     
-    puzzles_by_person = {}
-    for person in people_puzzles_list:
-        puzzles_by_person[person["name"]] = person["puzzles"]
+    puzzles_by_solver = {}
+    for solver in solvers_puzzles_list:
+        puzzles_by_solver[solver["name"]] = solver["puzzles"]
     
-    return puzzles_by_person
+    return puzzles_by_solver
 
 
 ### Main application loop ###
@@ -318,27 +318,27 @@ def run(engine: Engine, args: argparse.Namespace):
 
     ensure_puzzle_database(engine)
 
-    people_puzzles_list = []
+    solvers_puzzles_list = []
 
     # Check for existence of path
     if os.path.exists(args.file):
         _, extension = os.path.splitext(args.file)
-        people_puzzles_list = parse_people_file(args.file, extension)
+        solvers_puzzles_list = parse_solvers_file(args.file, extension)
     else:
         raise FileNotFoundError(f"File not found: {args.file}")
     
-    # Check if people exist in dict
-    if not people_puzzles_list:
-        msg = "No people found in provided file."
+    # Check if solvers exist in dict
+    if not solvers_puzzles_list:
+        msg = "No solvers found in provided file."
         raise ValueError(msg)
     
     # Create different maps for endpoint access
-    puzzles_by_person = create_puzzles_by_person(people_puzzles_list)
+    puzzles_by_solver = create_puzzles_by_solver(solvers_puzzles_list)
 
     # Database connection
     app.engine = engine
 
-    initialize_ratings_table(engine, puzzles_by_person)
+    initialize_ratings_table(engine, puzzles_by_solver)
 
     # Start server
     uvicorn.run(app, host="localhost", port=args.port)
@@ -356,7 +356,7 @@ def parse_args() -> argparse.Namespace:
 
     # Add arguments
     parser.add_argument("--port", type=int, default=8080, help="Port number to run the server on")
-    parser.add_argument("-f","--file",  default="example_files/fam_fav_puzzles.json", help="Person favorite puzzles file")
+    parser.add_argument("-f","--file",  default="example_files/fam_fav_puzzles.json", help="Solver favorite puzzles file")
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
 
     # Parse arguments
@@ -369,7 +369,7 @@ if __name__ == "__main__":
     engine = connect_to_database()
     try:
         run(engine, args)
-    except (FileNotFoundError, PersonNotFoundError, ValueError, ValidationError) as e:
+    except (FileNotFoundError, SolverNotFoundError, ValueError, ValidationError) as e:
         print(e)
     finally:
         shutdown(engine)

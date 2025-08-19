@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from pytest import mark
 from unittest.mock import patch, MagicMock
 
-from puzzles_app import add_ratings, create_puzzles_by_person, app
+from puzzles_app import add_ratings, create_puzzles_by_solver, app
 
 
 ### Setup Test Data ###
@@ -98,7 +98,7 @@ class MockSession:
     def add(self, entry):
         db = self._get_db()
         for rating in db.entries:
-            if rating.person == entry.person and rating.puzzle == entry.puzzle:
+            if rating.solver == entry.solver and rating.puzzle == entry.puzzle:
                 raise IntegrityError(statement=None, params=None, orig=Exception("Duplicate Entry"))
         db.entries.append(entry)
 
@@ -127,7 +127,7 @@ class TestAPIBase:
     @classmethod
     def setup_class(cls):
         cls.puzzles_data = sample_data_setup()
-        cls.puzzles_by_person = create_puzzles_by_person(cls.puzzles_data)
+        cls.puzzles_by_solver = create_puzzles_by_solver(cls.puzzles_data)
         cls.client = start_application()
 
     @classmethod
@@ -145,8 +145,8 @@ class TestSupportingFuncs:
     def setup_method(self, method):
         self.puzzles_data = sample_data_setup()
 
-    def test_create_puzzles_by_person(self):
-        res = create_puzzles_by_person(people_puzzles_list=self.puzzles_data)
+    def test_create_puzzles_by_solver(self):
+        res = create_puzzles_by_solver(solvers_puzzles_list=self.puzzles_data)
         assert res == {
             "Em": {
                 "The Mystic Maze": 7,
@@ -222,24 +222,24 @@ class TestSupportingFuncs:
         
 
 ### Test API Get Endpoints ###
-class TestAPIPeoplePath(TestAPIBase):
+class TestAPISolversPath(TestAPIBase):
     
     @classmethod
     def setup_class(cls):
         super().setup_class()
         app.engine.db = MockDB()
         with MockSession(app.engine) as session:
-            add_ratings(cls.puzzles_by_person, session)
+            add_ratings(cls.puzzles_by_solver, session)
 
     @patch("puzzles_app.Session", new=MockSession)
-    def test_get_people(self):
-        response = self.client.get("/api/people")
+    def test_get_solvers(self):
+        response = self.client.get("/api/solvers")
         assert response.status_code == 200
-        assert response.json() == self.puzzles_by_person
+        assert response.json() == self.puzzles_by_solver
 
     @patch("puzzles_app.Session", new=MockSession)
-    def test_get_person(self):
-        response = self.client.get("/api/people/em")
+    def test_get_solver(self):
+        response = self.client.get("/api/solvers/em")
         assert response.status_code == 200
         assert response.json() == {
             "The Mystic Maze": 7,
@@ -248,10 +248,10 @@ class TestAPIPeoplePath(TestAPIBase):
             }
     
     @patch("puzzles_app.Session", new=MockSession)
-    def test_get_person_invalid_name(self):
-        response = self.client.get("/api/people/bad")
+    def test_get_solver_invalid_name(self):
+        response = self.client.get("/api/solvers/bad")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Person Bad not found."}
+        assert response.json() == {"detail": "Solver Bad not found."}
 
 
 class TestAPIGamesPath(TestAPIBase):
@@ -261,7 +261,7 @@ class TestAPIGamesPath(TestAPIBase):
         super().setup_class()
         app.engine.db = MockDB()
         with MockSession(app.engine) as session:
-            add_ratings(cls.puzzles_by_person, session)
+            add_ratings(cls.puzzles_by_solver, session)
     
     @patch("puzzles_app.Session", new=MockSession)
     def test_get_puzzles(self):
@@ -291,19 +291,19 @@ class TestAPIGamesPath(TestAPIBase):
         assert response.json() == {"detail": "Puzzle Zelda not found."}
 
     @patch("puzzles_app.Session", new=MockSession)
-    def test_get_person_rating(self):
+    def test_get_solver_rating(self):
         response = self.client.get("/api/puzzles/the%20mystic%20maze/mel")
         assert response.status_code == 200
         assert response.json() == 6
 
     @patch("puzzles_app.Session", new=MockSession)
-    def test_get_person_rating_invalid_name(self):
+    def test_get_solver_rating_invalid_name(self):
         response = self.client.get("/api/puzzles/the%20mystic%20maze/bad")
         assert response.status_code == 404
         assert response.json() == {"detail": "Puzzle The Mystic Maze not rated by Bad."}
 
     @patch("puzzles_app.Session", new=MockSession)
-    def test_get_person_rating_invalid_puzzle(self):
+    def test_get_solver_rating_invalid_puzzle(self):
         response = self.client.get("/api/puzzles/zelda/em")
         assert response.status_code == 404
         assert response.json() == {"detail": "Puzzle Zelda not rated by Em."}
@@ -315,7 +315,7 @@ class TestAPIRatingMods(TestAPIBase):
     def setup_method(self, method):
         app.engine.db = MockDB()
         with MockSession(app.engine) as session:
-            add_ratings(self.puzzles_by_person, session)
+            add_ratings(self.puzzles_by_solver, session)
 
 
     # ============ Test Patch Methods =============
@@ -351,10 +351,10 @@ class TestAPIRatingMods(TestAPIBase):
         }
     
     @patch("puzzles_app.Session", new=MockSession)
-    def test_post_person_added(self):
-        response = self.client.post("/api/puzzles/the%20mystic%20maze/new_person?rating=5")
+    def test_post_solver_added(self):
+        response = self.client.post("/api/puzzles/the%20mystic%20maze/new_solver?rating=5")
         assert response.status_code == 201
-        assert response.json()["name"] == "New_Person"
+        assert response.json()["name"] == "New_Solver"
         assert response.json()["puzzles"] == {
             "The Mystic Maze": 5
         }
