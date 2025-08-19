@@ -34,11 +34,12 @@
 
 <body id="container">
 <div id="header">
-<div class="ui visible sidebar inverted vertical borderless menu">
-    <img id="logo" src="/static/puzzle.png" alt="Fun Games" />
-    {{ nav_link('games', 'Games') }}
-
-</div>
+    <div class="ui visible inverted borderless menu", style="height: 3em">
+        {{ nav_link('games', 'Games') }}
+        <div class="right menu">
+            <img id="logo" src="/static/puzzle.png" alt="Fun Games"/>
+        </div>
+    </div>
 </div>
 
 <div id="body" class="body">
