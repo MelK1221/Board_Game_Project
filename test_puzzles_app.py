@@ -20,17 +20,15 @@ def sample_data_setup():
     Setup sample data to use in tests
     """
     em_puzzles = {
-            "Boggle": 7,
-            "Hanabi": 6,
-            "Mysterium": 9,
-            "Rivals of Catan": 8
+            "The Mystic Maze": 7,
+            "Decaying Diner": 9,
+            "Hotel Vacancy": 5
         }
 
     mel_puzzles = {
-            "Codenames": 8,
-            "Hanabi": 8,
-            "Mysterium": 7,
-            "Settlers of Catan": 6
+            "Spirit Island in Canada": 9,
+            "The Mystic Maze": 6,
+            "The Gnomes Homes": 10
         }
 
     puzzles_data = [
@@ -151,16 +149,14 @@ class TestSupportingFuncs:
         res = create_puzzles_by_person(people_puzzles_list=self.puzzles_data)
         assert res == {
             "Em": {
-                "Boggle": 7,
-                "Hanabi": 6,
-                "Mysterium": 9,
-                "Rivals of Catan": 8
+                "The Mystic Maze": 7,
+                "Decaying Diner": 9,
+                "Hotel Vacancy": 5
                 },
             "Mel":{
-                "Codenames": 8,
-                "Hanabi": 8,
-                "Mysterium": 7,
-                "Settlers of Catan": 6
+                "Spirit Island in Canada": 9,
+                "The Mystic Maze": 6,
+                "The Gnomes Homes": 10
                 }
             }
         
@@ -172,7 +168,7 @@ class TestSupportingFuncs:
             {
                 "name": 123,
                 "puzzles": {
-                    "Boggle": 7,
+                    "The Mystic Maze": 7,
                 }
             }
         ]
@@ -196,7 +192,7 @@ class TestSupportingFuncs:
             {
                 "name": "Em",
                 "puzzles": {
-                    "Boggle": 11,
+                    "The Mystic Maze": 11,
                 }
             }
         ]
@@ -246,10 +242,9 @@ class TestAPIPeoplePath(TestAPIBase):
         response = self.client.get("/api/people/em")
         assert response.status_code == 200
         assert response.json() == {
-            "Boggle": 7,
-            "Hanabi": 6,
-            "Mysterium": 9,
-            "Rivals of Catan": 8
+            "The Mystic Maze": 7,
+            "Decaying Diner": 9,
+            "Hotel Vacancy": 5
             }
     
     @patch("puzzles_app.Session", new=MockSession)
@@ -273,21 +268,20 @@ class TestAPIGamesPath(TestAPIBase):
         response = self.client.get("/api/puzzles")
         assert response.status_code == 200
         assert sorted(response.json()) == sorted([
-            "Boggle",
-            "Rivals of Catan",
-            "Codenames",
-            "Hanabi",
-            "Mysterium",
-            "Settlers of Catan",
+            "The Mystic Maze",
+            "Decaying Diner",
+            "Hotel Vacancy",
+            "Spirit Island in Canada",
+            "The Gnomes Homes"
         ])
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_get_puzzle_ratings(self):
-        response = self.client.get("/api/puzzles/hanabi")
+        response = self.client.get("/api/puzzles/the%20mystic%20maze")
         assert response.status_code == 200
         assert response.json() == {
-            "Em": 6,
-            "Mel": 8
+            "Em": 7,
+            "Mel": 6
         }
 
     @patch("puzzles_app.Session", new=MockSession)
@@ -298,15 +292,15 @@ class TestAPIGamesPath(TestAPIBase):
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_get_person_rating(self):
-        response = self.client.get("/api/puzzles/hanabi/mel")
+        response = self.client.get("/api/puzzles/the%20mystic%20maze/mel")
         assert response.status_code == 200
-        assert response.json() == 8
+        assert response.json() == 6
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_get_person_rating_invalid_name(self):
-        response = self.client.get("/api/puzzles/hanabi/bad")
+        response = self.client.get("/api/puzzles/the%20mystic%20maze/bad")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Puzzle Hanabi not rated by Bad."}
+        assert response.json() == {"detail": "Puzzle The Mystic Maze not rated by Bad."}
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_get_person_rating_invalid_puzzle(self):
@@ -327,18 +321,18 @@ class TestAPIRatingMods(TestAPIBase):
     # ============ Test Patch Methods =============
     @patch("puzzles_app.Session", new=MockSession)
     def test_patch_valid_update(self):
-        response = self.client.patch("/api/puzzles/hanabi/mel?rating=4")
+        response = self.client.patch("/api/puzzles/the%20mystic%20maze/mel?rating=4")
         assert response.status_code == 200
         assert response.json()["name"] == "Mel"
         assert response.json()["puzzles"] == {
-            "Hanabi": 4,
+            "The Mystic Maze": 4,
         }
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_patch_invalid_name(self):
-        response = self.client.patch("/api/puzzles/hanabi/bad?rating=4")
+        response = self.client.patch("/api/puzzles/the%20mystic%20maze/bad?rating=4")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Puzzle Hanabi not rated by Bad."}
+        assert response.json() == {"detail": "Puzzle The Mystic Maze not rated by Bad."}
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_patch_invalid_puzzle(self):
@@ -353,28 +347,28 @@ class TestAPIRatingMods(TestAPIBase):
         assert response.status_code == 201
         assert response.json()["name"] == "Em"
         assert response.json()["puzzles"] == {
-            "New_puzzle": 5
+            "New_Puzzle": 5
         }
     
     @patch("puzzles_app.Session", new=MockSession)
     def test_post_person_added(self):
-        response = self.client.post("/api/puzzles/hanabi/new_person?rating=5")
+        response = self.client.post("/api/puzzles/the%20mystic%20maze/new_person?rating=5")
         assert response.status_code == 201
-        assert response.json()["name"] == "New_person"
+        assert response.json()["name"] == "New_Person"
         assert response.json()["puzzles"] == {
-            "Hanabi": 5
+            "The Mystic Maze": 5
         }
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_post_entry_exists(self):
-        response = self.client.post("/api/puzzles/hanabi/em?rating=5")
+        response = self.client.post("/api/puzzles/the%20mystic%20maze/em?rating=5")
         assert response.status_code == 409
-        assert response.json() == {"detail": "Puzzle Hanabi has already been rated by Em."}
+        assert response.json() == {"detail": "Puzzle The Mystic Maze has already been rated by Em."}
 
     # ============ Test Delete Methods =============
     @patch("puzzles_app.Session", new=MockSession)
     def test_delete_valid_entry(self):
-        response = self.client.delete("/api/puzzles/hanabi/mel")
+        response = self.client.delete("/api/puzzles/the%20mystic%20maze/mel")
         assert response.status_code == 204
         assert response.text == ''
 
@@ -386,6 +380,6 @@ class TestAPIRatingMods(TestAPIBase):
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_delete_invalid_name(self):
-        response = self.client.delete("/api/puzzles/hanabi/bad")
+        response = self.client.delete("/api/puzzles/the%20mystic%20maze/bad")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Puzzle Hanabi not rated by Bad."}
+        assert response.json() == {"detail": "Puzzle The Mystic Maze not rated by Bad."}

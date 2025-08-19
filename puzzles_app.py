@@ -91,7 +91,7 @@ def get_people():
 @app.get("/api/people/{person_name}")
 def get_person(person_name: str):
     person_to_ratings = {}
-    person_name = person_name.capitalize()
+    person_name = person_name.title()
     with Session(app.engine) as session:  
         person_ratings = session.query(Rating).filter_by(person=person_name).all()
         if not person_ratings:
@@ -117,7 +117,7 @@ def get_puzzles():
 
 @app.get("/api/puzzles/{puzzle}")
 def get_puzzle_ratings(puzzle: str):
-    puzzle = puzzle.capitalize()
+    puzzle = puzzle.title()
     person_ratings = {}
 
     with Session(app.engine) as session:  
@@ -133,8 +133,8 @@ def get_puzzle_ratings(puzzle: str):
 
 @app.get("/api/puzzles/{puzzle}/{person_name}")
 def get_person_rating(puzzle: str, person_name: str):
-    person_name = person_name.capitalize()
-    puzzle = puzzle.capitalize()
+    person_name = person_name.title()
+    puzzle = puzzle.title()
     rating = None
     with Session(app.engine) as session:  
         ratings = session.query(Rating).filter_by(puzzle=puzzle, person=person_name).all()
@@ -155,8 +155,8 @@ def update_person_rating(
     Update rating of existing puzzle in database.
     Returns dict of person whose puzzle rating was updated.
     """
-    puzzle = puzzle.capitalize()
-    person_name = person_name.capitalize()
+    puzzle = puzzle.title()
+    person_name = person_name.title()
     updated_rating_entry = {}
 
     with Session(app.engine) as session:
@@ -181,8 +181,8 @@ def add_puzzle_rating(
     Create new rated puzzle entry.
     Returns dict of person new entry added to.
     """
-    puzzle = puzzle.capitalize()
-    person_name = person_name.capitalize()
+    puzzle = puzzle.title()
+    person_name = person_name.title()
     updated_rating_entry = {}
 
     with Session(app.engine) as session:      
@@ -208,8 +208,8 @@ def delete_puzzle_rating(
     Delete rated puzzle from person entry.
     Returns dict of person puzzle rating deleted from.
     """
-    puzzle = puzzle.capitalize()
-    person_name = person_name.capitalize()
+    puzzle = puzzle.title()
+    person_name = person_name.title()
     person_to_ratings = {}
 
     with Session(app.engine) as session:
@@ -293,8 +293,8 @@ def parse_people_file(filename, ext) -> list:
         validate(instance=people_list, schema=schema)
 
         for person_dict in people_list:
-            person_dict["name"] = person_dict["name"].capitalize()
-            person_dict["puzzles"] = {puzzle.capitalize(): rating for puzzle, rating in person_dict["puzzles"].items()}
+            person_dict["name"] = person_dict["name"].title()
+            person_dict["puzzles"] = {puzzle.title(): rating for puzzle, rating in person_dict["puzzles"].items()}
             people_puzzles_list.append(person_dict)
             
         return people_puzzles_list
