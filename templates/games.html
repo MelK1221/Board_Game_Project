@@ -36,24 +36,38 @@ $(document).ready(function() {
     let games_table = $('#games').DataTable({
         "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
         "iDisplayLength": -1,
-        "ajax": "{{ request.url_for('get_games') }}",
+        "ajax": {
+            "url": "{{ request.url_for('get_games') }}",
+            "dataSrc": function(json) {
+                // Convert {GameName: [ratings]} → array of objects
+                return Object.entries(json).map(([name, ratings]) => {
+                    return { game: name, ratings: ratings };
+                });
+            }
+        },
         "columns": [
             {
-                "width": "80%",
-                "data": "id",
+                "data": "game",
+                "title": "Game",
+                "width": "60%",
+            },
+            {
+                "data": "ratings",
+                "title": "Average Rating",
+                "width": "30%",
                 "render": function(data, type, row) {
-                    let res = row.id;
-                    return res
+                    if (!data || data.length === 0) return "N/A";
+                    let avg = data.reduce((a, b) => a + b, 0) / data.length;
+                    return avg.toFixed(2);
                 }
             },
             {
-                "width": "20%",
+                "width": "10%",
                 "class": "dt-body-left dimmable",
                 "render": function(data, type, row) {
                     let res = "";
-                    if (row.ssh_cmd) {
-                        res += "<div class='mini ui icon button ssh-cmd-button' data-tooltip='Copy SSH command to clipboard'><i class='terminal icon'></i></div>";
-                    }
+                    // FIXME: replace with magnifying glass - place holder for info
+                    res += "<div class='mini ui icon button test-button' data-tooltip='Test tooltip'><i class='terminal icon'></i></div>";
                     return res
                 }
             }
@@ -62,11 +76,11 @@ $(document).ready(function() {
     });
 
     function register_button_callbacks() {
-        let deployment_entry = $('#deployments tbody');
+        let entry = $('#games tbody');
 
-        deployment_entry.on('click', '.ssh-cmd-button', function () {
-            let data = deployments_table.row($(this).parents('tr')).data();
-            navigator.clipboard.writeText(data.ssh_cmd);
+        _entry.on('click', '.test-button', function () {
+            let data = games_table.row($(this).parents('tr')).data();
+            // TODO: do something
         });
     }
 
