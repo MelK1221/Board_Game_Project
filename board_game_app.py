@@ -79,7 +79,7 @@ def index():
     return RedirectResponse(url="/games")
 
 @app.get("/games", response_class=HTMLResponse)
-async def games(request: Request):
+def games(request: Request):
     return templates.TemplateResponse("games.html", {"request": request})
 
 

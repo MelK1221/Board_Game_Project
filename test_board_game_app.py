@@ -272,13 +272,13 @@ class TestAPIGamesPath(TestAPIBase):
     def test_get_games(self):
         response = self.client.get("/api/games")
         assert response.status_code == 200
-        assert sorted(response.json()) == sorted([
-            "Boggle",
-            "Rivals of Catan",
-            "Codenames",
-            "Hanabi",
-            "Mysterium",
-            "Settlers of Catan",
+        assert sorted(response.json().items()) == sorted([
+            ("Boggle", [7]),
+            ("Rivals of Catan", [8]),
+            ("Codenames", [8]),
+            ("Hanabi", [6, 8]),
+            ("Mysterium", [9, 7]),
+            ("Settlers of Catan", [6]),
         ])
 
     @patch("board_game_app.Session", new=MockSession)
