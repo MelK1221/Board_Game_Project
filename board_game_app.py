@@ -354,7 +354,6 @@ def run(engine: Engine, args: argparse.Namespace):
     initialize_ratings_table(engine, games_by_player)
 
     # Start server
-    print("Routes at startup:", [r.name for r in app.routes])
     uvicorn.run(app, host="localhost", port=args.port)
 
 
