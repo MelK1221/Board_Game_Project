@@ -38,6 +38,7 @@ postgres=# \du
 echo "[REDACTED]" > password.txt
 
 # Install python application
+```
 pip install -r requirements.txt
 ```
 
