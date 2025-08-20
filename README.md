@@ -1,9 +1,9 @@
-# Board_Game_Project
-Sisters project tracking board games :)
+# Puzzles_Project
+Sisters project tracking puzzle ownership and ratings :)
 
-Board Game Collection Manager
+Puzzles Collection Manager
 
-A simple app to log, browse, and rate board games you own or have played.
+A simple app to log, browse, and rate puzzles you own or have played.
 
 Stage 1:
 
@@ -14,12 +14,12 @@ Stage 1:
 
 Stage 2:
 
-* FastAPI backend to serve and query game data
-* PostgreSQL to store the game collection
+* FastAPI backend to serve and query puzzle data
+* PostgreSQL to store the puzzle collection
 * Simple frontend with HTML/JS
 * Use SQLAlchemy as the ORM
 
-Bonus idea: Integrate with the BoardGameGeek API to fetch game info automatically.
+Bonus idea: Integrate Neural Network to help recommend puzzles based on past ratings.
 
 ### Installation
 ```
@@ -43,8 +43,7 @@ pip install -r requirements.txt
 
 ### Run the application
 ```
-./Board_Game_App.py
-```
+./puzzles_app.py
 Then open the UI at the desired endpoint:
 http://localhost:8080/[endpoint]
 
@@ -61,15 +60,15 @@ brew services info postgresql
 # Show databases
 postgres=# \list
 # Connect to Database
-postgres=# \c board_games
+postgres=# \c puzzles
 # Show tables in DB
 postgres=# \dt
 # Describe the 'ratings' table
-board_games=# \d ratings
+puzzles=# \d ratings
 # See all current entries
-board_games=# SELECT * FROM ratings;
+puzzles=# SELECT * FROM ratings;
 # Drop table manually
-board_games=# DROP TABLE ratings;
+puzzles=# DROP TABLE ratings;
 ```
 
 ### Test the application
@@ -81,28 +80,28 @@ pytest
 ```
 To run just a particular file:
 ```
-pytest test_board_game_app.py 
+pytest test_puzzles_app.py 
 ```
 
 ### Project outline
 
-1. Introduce entrypoint file with argument parsing, hard-coded list of Emily and Melanies favorite games.
-2. Add ability to load 'favorite games' for a list of players from a file (CSV and JSON should both be  supported).
+1. Introduce entrypoint file with argument parsing, hard-coded list of Emily and Melanies favorite puzzles.
+2. Add ability to load 'favorite puzzles' for a list of solvers from a file (CSV and JSON should both be  supported).
 3. Move hard-coded emily and melanie list to a JSON file that is included in version control and that the entrypoint file loads by default.
-4. Introduce basic Web API using Fast API with endpoints to show list of users and their favorite games and show a single user, which support the GET methods
-    - `/api/players/` -> List of all players
-    - `/api/players/<player>` -> List of games the player has submitted
-5. Add "rating" to player game info
+4. Introduce basic Web API using Fast API with endpoints to show list of users and their favorite puzzles and show a single user, which support the GET methods
+    - `/api/solvers/` -> List of all solvers
+    - `/api/solvers/<solver>` -> List of puzzles the solver has submitted
+5. Add "rating" to solver puzzle info
 6. Implement Fast API GET methods for:
-    - `/api/games/` -> List of all games
-    - `/api/games/<game>` -> List of all ratings by player for this game
-    - `/api/games/<game>/<player>` -> Game rating for this player
+    - `/api/puzzles/` -> List of all puzzles
+    - `/api/puzzles/<puzzle>` -> List of all ratings by solver for this puzzle
+    - `/api/puzzles/<puzzle>/<solver>` -> Puzzle rating for this solver
 7. Add basic unit tests around the existing API
-8. Add API PATCH method to update a rating of a game `/api/games/<game>/<player>`
-9. Add API POST and DELETE methods for `/api/games/<game>/<player>`
-10. Create "games" DB in postgresql with a 1 table, "ratings" that has 3 fields:
-    - player (string)
-    - game (string)
+8. Add API PATCH method to update a rating of a puzzle `/api/puzzles/<puzzle>/<solver>`
+9. Add API POST and DELETE methods for `/api/puzzles/<puzzle>/<solver>`
+10. Create "puzzles" DB in postgresql with a 1 table, "ratings" that has 3 fields:
+    - solver (string)
+    - puzzle (string)
     - rating (int)
 11. Load data from default JSON into the table.
     - API to read from DB instead of file
