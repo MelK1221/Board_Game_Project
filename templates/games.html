@@ -65,26 +65,14 @@ $(document).ready(function() {
                 "width": "10%",
                 "class": "dt-body-left dimmable",
                 "render": function(data, type, row) {
-                    let res = "";
-                    // FIXME: replace with magnifying glass - place holder for info
-                    res += "<div class='mini ui icon button test-button' data-tooltip='Test tooltip'><i class='terminal icon'></i></div>";
+                    let url = "{{ request.url_for('get_game_ratings', game='GAME') }}".replace('GAME', row.game);
+                    let res = "<a class='mini ui icon button info-button' href='" + url + "' data-tooltip='See more game info'><i class='search icon'></i></a>";
                     return res
                 }
             }
         ],
         "order": [[1, "desc"]],
     });
-
-    function register_button_callbacks() {
-        let entry = $('#games tbody');
-
-        _entry.on('click', '.test-button', function () {
-            let data = games_table.row($(this).parents('tr')).data();
-            // TODO: do something
-        });
-    }
-
-    register_button_callbacks();
 
 })
 
