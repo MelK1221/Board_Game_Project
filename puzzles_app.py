@@ -16,6 +16,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from sqlalchemy import create_engine, Engine, Column, Integer, String, UniqueConstraint
 from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import declarative_base, Session
@@ -27,7 +28,6 @@ DB_HOST = "127.0.0.1"
 DB_NAME = "puzzles"
 DB_PASSWORD_FILE = "password.txt"
 SCHEMA_FILE = "ratings_schema.json"
-from pydantic import BaseModel
 
 
 ALL="all"
