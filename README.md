@@ -48,6 +48,8 @@ pip install -r requirements.txt
 Then open the UI at the desired endpoint:
 http://localhost:8080/[endpoint]
 
+The root endpoint http://localhost:8080/ will take you to the main web page for the application.
+
 
 ### Stop PostgreSQL Server
 ```
@@ -81,7 +83,7 @@ pytest
 ```
 To run just a particular file:
 ```
-pytest test_puzzles_app.py 
+pytest test_puzzles_app.py -v
 ```
 
 ### Project outline

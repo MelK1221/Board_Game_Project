@@ -254,7 +254,7 @@ class TestAPISolversPath(TestAPIBase):
         assert response.json() == {"detail": "Solver Bad not found."}
 
 
-class TestAPIGamesPath(TestAPIBase):
+class TestAPIPuzzlesPath(TestAPIBase):
     
     @classmethod
     def setup_class(cls):
@@ -267,12 +267,12 @@ class TestAPIGamesPath(TestAPIBase):
     def test_get_puzzles(self):
         response = self.client.get("/api/puzzles")
         assert response.status_code == 200
-        assert sorted(response.json()) == sorted([
-            "The Mystic Maze",
-            "Decaying Diner",
-            "Hotel Vacancy",
-            "Spirit Island in Canada",
-            "The Gnomes Homes"
+        assert sorted(response.json().items()) == sorted([
+            ("The Mystic Maze", [7,6]),
+            ("Decaying Diner", [9]),
+            ("Hotel Vacancy", [5]),
+            ("Spirit Island in Canada", [9]),
+            ("The Gnomes Homes", [10]),
         ])
 
     @patch("puzzles_app.Session", new=MockSession)
