@@ -281,6 +281,22 @@ def initialize_ratings_table(engine, puzzles_by_solver: dict):
         except IntegrityError as e:
             print(f"Commit failed: {e}")
 
+def update_json_data(engine: Engine):
+    updated_solver_data = []
+    with Session(engine) as session:
+        solvers = session.query(Rating.solver).distinct()
+        for solver_name in solvers:
+            solver_entry = defaultdict()
+            solver_ratings = session.query(Rating).filter_by(solver=solver_name[0]).all()
+            solver_entry["name"] = solver_name[0]
+            solver_entry["puzzles"] = defaultdict()
+            for puzzle_rating in solver_ratings:
+                solver_entry["puzzles"][puzzle_rating.puzzle] = puzzle_rating.rating
+
+            updated_solver_data.append(solver_entry)
+    
+        with open("example_files/fam_fav_puzzles.json", "w") as puzzle_file:
+            json.dump(updated_solver_data, puzzle_file, indent=2)
 
 ### Supporting functions ###
 def parse_solvers_file(filename, ext) -> list:
@@ -361,6 +377,9 @@ def run(engine: Engine, args: argparse.Namespace):
 
 
 def shutdown(engine: Engine):
+    # Save database updates back to json file
+    update_json_data(engine)
+    
     with Session(engine) as session:
         # Clear out table entries on shutdown.
         session.query(Rating).delete()
