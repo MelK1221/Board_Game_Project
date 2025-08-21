@@ -1,53 +1,52 @@
 [
-   {
-      "name": "Em",
-      "puzzles": {
-         "Decaying Diner": 7,
-         "The Mystic Maze": 9,
-         "Hotel Vacancy": 8,
-         "The Crystal Caves": 10,
-         "The Puzzled Patron": 6
-      }
-   },
-   {
-      "name": "Mel",
-      "puzzles": {
-         "The Gnomes Homes": 8,
-         "Spirit Island in Canada": 7,
-         "The Sunny City": 9,
-         "Kitchen Cupboard": 6,
-         "Race of the Baby Sea Turtles": 10
-      }
-
-   },
-   {
-      "name": "Sarah",
-      "puzzles": {
-         "Cabinet of Curiosities": 9,
-         "The Secret Soup": 7,
-         "Cat Tree Heaven": 8,
-         "The Drippy Trip": 6,
-         "Jaws": 10
-      }
-   },
-   {
-      "name": "Mike",
-      "puzzles": {
-         "Wolves in the Forest": 9,
-         "The Happy Isles": 7,
-         "Sistine Chapel": 8,
-         "The Busy Bistro": 6,
-         "The Forest Feast": 10
-      }
-   },
-   {
-      "name": "Laurie",
-      "puzzles": {
-         "Little Garden World": 7,
-         "The Beach Hut": 8,
-         "Lake Matheson, New Zealand": 9,
-         "No Dogs on the Beach": 6,
-         "Looney Tunes - Challenge": 10
-      }
-   }
+  {
+    "name": "Em",
+    "puzzles": {
+      "Decaying Diner": 7,
+      "The Mystic Maze": 9,
+      "Hotel Vacancy": 8,
+      "The Crystal Caves": 10,
+      "The Puzzled Patron": 6
+    }
+  },
+  {
+    "name": "Mike",
+    "puzzles": {
+      "Wolves In The Forest": 9,
+      "The Happy Isles": 7,
+      "Sistine Chapel": 8,
+      "The Busy Bistro": 6,
+      "The Forest Feast": 10
+    }
+  },
+  {
+    "name": "Mel",
+    "puzzles": {
+      "The Gnomes Homes": 8,
+      "Spirit Island In Canada": 7,
+      "The Sunny City": 9,
+      "Kitchen Cupboard": 6,
+      "Race Of The Baby Sea Turtles": 10
+    }
+  },
+  {
+    "name": "Laurie",
+    "puzzles": {
+      "Little Garden World": 7,
+      "The Beach Hut": 8,
+      "Lake Matheson, New Zealand": 9,
+      "No Dogs On The Beach": 6,
+      "Looney Tunes - Challenge": 10
+    }
+  },
+  {
+    "name": "Sarah",
+    "puzzles": {
+      "Cabinet Of Curiosities": 9,
+      "The Secret Soup": 7,
+      "Cat Tree Heaven": 8,
+      "The Drippy Trip": 6,
+      "Jaws": 10
+    }
+  }
 ]
