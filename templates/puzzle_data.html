@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+{% endblock %}
+
+{% block title %}Puzzles{% endblock %}
+
+{% block content %}
+
+<h1>Ratings for {{ puzzle }}</h1>
+
+<table id="puzzle_ratings" class="display" style="width:100%">
+    <thead>
+        <tr>
+            <th class="all">Solver</th>
+            <th class="all">Rating</th>
+        </tr>
+    </thead>
+</table>
+
+
+<script>
+
+$(document).keypress(function(e) {
+    if (e.keycode == 13 || e.which == 13) {
+        // no buttons expect for positive buttons on modal
+        // have ids: ui primary positive button
+        $('.ui.primary.positive.button').click();
+    }
+});
+
+$(document).ready(function() {
+
+    // let current_puzzle = "{{ puzzle }}";
+    let ratings_table = $('#puzzle_ratings').DataTable({
+        "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        "iDisplayLength": -1,
+        "ajax": {
+            "url": "{{ request.url_for('get_puzzle_ratings', puzzle=puzzle) }}",
+            "dataSrc": function(json) {
+                // Convert {puzzle: [ratings]} → array of objects
+                return Object.entries(json).map(([name, rating]) => {
+                    return { solver: name, rating: rating };
+                });
+            }
+        },
+        "columns": [
+            {
+                "data": "solver",
+                "title": "Solver",
+                "width": "80%",
+            },
+            {
+                "data": "rating",
+                "title": "Rating",
+                "width": "20%",
+                // "render": function(data, type, row) {
+                //     if (!data || data.length === 0) return "N/A";
+                //     let avg = data.reduce((a, b) => a + b, 0) / data.length;
+                //     return avg.toFixed(2);
+                // }
+            }//,
+            // {
+            //     "width": "10%",
+            //     "class": "dt-body-left dimmable",
+            //     "render": function(data, type, row) {
+            //         let url = "{{ request.url_for('get_puzzle_ratings', puzzle='PUZZLE') }}".replace('PUZZLE', row.puzzle);
+            //         let res = "<a class='mini ui icon button info-button' href='" + url + "' data-tooltip='See more puzzle info'><i class='search icon'></i></a>";
+            //         return res
+            //     }
+            // }
+        ],
+        "order": [[1, "desc"]],
+    });
+
+})
+
+</script>
+
+{% endblock %}

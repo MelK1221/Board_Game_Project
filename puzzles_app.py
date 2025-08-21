@@ -84,6 +84,11 @@ def index():
 def puzzles(request: Request):
     return templates.TemplateResponse("puzzles.html", {"request": request})
 
+@app.get("/puzzles/{puzzle}", response_class=HTMLResponse)
+def puzzle_ratings(puzzle: str, request: Request):
+    puzzle = puzzle.title()
+    return templates.TemplateResponse("puzzle_data.html", {"puzzle": puzzle, "request": request})
+
 
 @app.get("/favicon.ico")
 def favicon():
