@@ -5,7 +5,7 @@ Entry point python file to start Puzzles Project.
 Authors: Emily Vaughn-Kukura and Melanie Kukura
 """
 import argparse
-import csv
+import datetime
 import json
 import os
 from collections import defaultdict
@@ -13,9 +13,10 @@ from pathlib import Path
 from typing import Dict
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Engine, Column, Integer, String, UniqueConstraint
 from sqlalchemy_utils import database_exists, create_database
@@ -69,6 +70,19 @@ app = FastAPI(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+templates.env.globals["now"] = datetime.datetime.now
+
+
+### UI routes ### 
+@app.get("/", response_class=HTMLResponse)
+def index():
+    return RedirectResponse(url="/puzzles")
+
+
+@app.get("/puzzles", response_class=HTMLResponse)
+def games(request: Request):
+    return templates.TemplateResponse("puzzles.html", {"request": request})
 
 
 @app.get("/favicon.ico")
@@ -105,14 +119,13 @@ def get_solver(solver_name: str):
 
 @app.get("/api/puzzles/")
 def get_puzzles():
-    puzzles = []
+    puzzle_info = defaultdict(list)
     with Session(app.engine) as session:
-        puzzle_results = session.query(Rating.puzzle).distinct().all()
-        # When you query a single attribute you still get back a tuple (1-tuple)
-        # For example: puzzle_results =[('Ticket to ride',), ('Risk',), ...]
-        puzzles = [puzzle[0] for puzzle in puzzle_results]
+        ratings = session.query(Rating).all()
+        for rating in ratings:
+            puzzle_info[rating.puzzle].append(rating.rating)
 
-    return puzzles
+    return puzzle_info
 
 
 @app.get("/api/puzzles/{puzzle}")
@@ -145,6 +158,7 @@ def get_solver_rating(puzzle: str, solver_name: str):
 
     return rating
 
+
 @app.patch("/api/puzzles/{puzzle}/{solver_name}", response_model = SolverEntry)
 def update_solver_rating(
     puzzle: str,
@@ -170,6 +184,7 @@ def update_solver_rating(
         updated_rating_entry[puzzle] = ratings[0].rating
 
     return SolverEntry(name=solver_name, puzzles=updated_rating_entry)
+
 
 @app.post("/api/puzzles/{puzzle}/{solver_name}", response_model = SolverEntry, status_code=201)
 def add_puzzle_rating(
@@ -198,6 +213,7 @@ def add_puzzle_rating(
 
 
     return SolverEntry(name=solver_name, puzzles=updated_rating_entry)
+
 
 @app.delete("/api/puzzles/{puzzle}/{solver_name}", status_code=204)
 def delete_puzzle_rating(
