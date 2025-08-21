@@ -81,7 +81,7 @@ def index():
 
 
 @app.get("/puzzles", response_class=HTMLResponse)
-def games(request: Request):
+def puzzles(request: Request):
     return templates.TemplateResponse("puzzles.html", {"request": request})
 
 

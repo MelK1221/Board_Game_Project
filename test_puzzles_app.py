@@ -254,7 +254,7 @@ class TestAPISolversPath(TestAPIBase):
         assert response.json() == {"detail": "Solver Bad not found."}
 
 
-class TestAPIGamesPath(TestAPIBase):
+class TestAPIPuzzlesPath(TestAPIBase):
     
     @classmethod
     def setup_class(cls):
@@ -267,7 +267,6 @@ class TestAPIGamesPath(TestAPIBase):
     def test_get_puzzles(self):
         response = self.client.get("/api/puzzles")
         assert response.status_code == 200
-        ## FIXME: add contents
         assert sorted(response.json().items()) == sorted([
             ("The Mystic Maze", [7,6]),
             ("Decaying Diner", [9]),

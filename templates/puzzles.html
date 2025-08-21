@@ -4,17 +4,17 @@
 {{ super() }}
 {% endblock %}
 
-{% block title %}Games{% endblock %}
+{% block title %}Puzzles{% endblock %}
 
 {% block content %}
 
-<h1>Games</h1>
+<h1>Puzzles</h1>
 
-<table id="games" class="display" style="width:100%">
+<table id="puzzles" class="display" style="width:100%">
     <thead>
         <tr>
             <th class="all"></th>
-            <th class="all">Game</th>
+            <th class="all">Puzzle</th>
             <th class="all">Actions</th>
         </tr>
     </thead>
@@ -33,22 +33,22 @@ $(document).keypress(function(e) {
 
 $(document).ready(function() {
 
-    let games_table = $('#games').DataTable({
+    let puzzle_table = $('#puzzles').DataTable({
         "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
         "iDisplayLength": -1,
         "ajax": {
-            "url": "{{ request.url_for('get_games') }}",
+            "url": "{{ request.url_for('get_puzzles') }}",
             "dataSrc": function(json) {
-                // Convert {GameName: [ratings]} → array of objects
+                // Convert {puzzle: [ratings]} → array of objects
                 return Object.entries(json).map(([name, ratings]) => {
-                    return { game: name, ratings: ratings };
+                    return { puzzle: name, ratings: ratings };
                 });
             }
         },
         "columns": [
             {
-                "data": "game",
-                "title": "Game",
+                "data": "puzzle",
+                "title": "Puzzle",
                 "width": "60%",
             },
             {
@@ -65,8 +65,8 @@ $(document).ready(function() {
                 "width": "10%",
                 "class": "dt-body-left dimmable",
                 "render": function(data, type, row) {
-                    let url = "{{ request.url_for('get_game_ratings', game='GAME') }}".replace('GAME', row.game);
-                    let res = "<a class='mini ui icon button info-button' href='" + url + "' data-tooltip='See more game info'><i class='search icon'></i></a>";
+                    let url = "{{ request.url_for('get_puzzle_ratings', puzzle='PUZZLE') }}".replace('PUZZLE', row.puzzle);
+                    let res = "<a class='mini ui icon button info-button' href='" + url + "' data-tooltip='See more puzzle info'><i class='search icon'></i></a>";
                     return res
                 }
             }
