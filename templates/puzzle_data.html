@@ -22,14 +22,6 @@
 
 <script>
 
-$(document).keypress(function(e) {
-    if (e.keycode == 13 || e.which == 13) {
-        // no buttons expect for positive buttons on modal
-        // have ids: ui primary positive button
-        $('.ui.primary.positive.button').click();
-    }
-});
-
 $(document).ready(function() {
 
     let ratings_table = $('#puzzle_ratings').DataTable({
