@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+{% endblock %}
+
+{% block title %}Puzzles{% endblock %}
+
+{% block content %}
+
+<h1>Ratings for {{ puzzle }}</h1>
+
+<table id="puzzle_ratings" class="display" style="width:100%">
+    <thead>
+        <tr>
+            <th class="all">Solver</th>
+            <th class="all">Rating</th>
+        </tr>
+    </thead>
+</table>
+
+
+<script>
+
+$(document).ready(function() {
+
+    let ratings_table = $('#puzzle_ratings').DataTable({
+        "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        "iDisplayLength": -1,
+        "ajax": {
+            "url": "{{ request.url_for('get_puzzle_ratings', puzzle=puzzle) }}",
+            "dataSrc": function(json) {
+                // Convert {name: rating} → array of objects
+                return Object.entries(json).map(([name, rating]) => {
+                    return { solver: name, rating: rating };
+                });
+            }
+        },
+        "columns": [
+            {
+                "data": "solver",
+                "title": "Solver",
+                "width": "80%",
+            },
+            {
+                "data": "rating",
+                "title": "Rating",
+                "width": "20%",
+            }
+        ],
+        "order": [[1, "desc"]],
+    });
+
+})
+
+</script>
+
+{% endblock %}

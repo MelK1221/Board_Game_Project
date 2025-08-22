@@ -23,14 +23,6 @@
 
 <script>
 
-$(document).keypress(function(e) {
-    if (e.keycode == 13 || e.which == 13) {
-        // no buttons expect for positive buttons on modal
-        // have ids: ui primary positive button
-        $('.ui.primary.positive.button').click();
-    }
-});
-
 $(document).ready(function() {
 
     let puzzle_table = $('#puzzles').DataTable({
@@ -65,7 +57,7 @@ $(document).ready(function() {
                 "width": "10%",
                 "class": "dt-body-left dimmable",
                 "render": function(data, type, row) {
-                    let url = "{{ request.url_for('get_puzzle_ratings', puzzle='PUZZLE') }}".replace('PUZZLE', row.puzzle);
+                    let url = "{{ request.url_for('puzzle_ratings', puzzle='PUZZLE') }}".replace('PUZZLE', row.puzzle);
                     let res = "<a class='mini ui icon button info-button' href='" + url + "' data-tooltip='See more puzzle info'><i class='search icon'></i></a>";
                     return res
                 }
