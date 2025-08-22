@@ -22,13 +22,13 @@ postgres=# \du
 echo "[REDACTED]" > password.txt
 
 # Install python application
-```
 pip install -r requirements.txt
 ```
 
 ### Run the application
 ```
 ./puzzles_app.py
+```
 Then open the UI at the desired endpoint:
 http://localhost:8080/[endpoint]
 
