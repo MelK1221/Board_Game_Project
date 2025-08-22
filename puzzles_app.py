@@ -286,10 +286,10 @@ def update_json_data(engine: Engine):
     with Session(engine) as session:
         solvers = session.query(Rating.solver).distinct()
         for solver_name in solvers:
-            solver_entry = defaultdict()
+            solver_entry = {}
             solver_ratings = session.query(Rating).filter_by(solver=solver_name[0]).all()
             solver_entry["name"] = solver_name[0]
-            solver_entry["puzzles"] = defaultdict()
+            solver_entry["puzzles"] = {}
             for puzzle_rating in solver_ratings:
                 solver_entry["puzzles"][puzzle_rating.puzzle] = puzzle_rating.rating
 
