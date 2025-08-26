@@ -18,9 +18,9 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Engine, Column, Integer, String, UniqueConstraint
+from sqlalchemy import create_engine, Engine, Column, Integer, String, UniqueConstraint, ForeignKey
 from sqlalchemy_utils import database_exists, create_database
-from sqlalchemy.orm import declarative_base, Session
+from sqlalchemy.orm import declarative_base, Session, relationship
 from sqlalchemy.exc import IntegrityError
 from jsonschema import validate, ValidationError
 
@@ -29,9 +29,6 @@ DB_HOST = "127.0.0.1"
 DB_NAME = "puzzles"
 DB_PASSWORD_FILE = "password.txt"
 SCHEMA_FILE = "ratings_schema.json"
-
-
-ALL="all"
 
 class SolverEntry(BaseModel):
     """Pydantic response model for API patch/post/delete methods"""
@@ -49,16 +46,41 @@ class SolverNotFoundError(Exception):
 Base = declarative_base()
 
 # Define table schema
+class Puzzle(Base):
+    __tablename__ = "puzzles"
+
+    id = Column(Integer, primary_key=True)
+    puzzle = Column(String, nullable=False)
+
+    ratings = relationship("Rating", back_populates="puzzle")
+
+    # __table_args__ = (
+    #     UniqueConstraint("solver", "puzzle", name="solver-and-puzzle"),
+    # )
+
+class Solver(Base):
+    __tablename__ = "solvers"
+
+    id = Column(Integer, primary_key=True)
+    solver = Column(String, nullable=False)
+
+    ratings = relationship("Rating", back_populates="solver")
+
+    # __table_args__ = (
+    #     UniqueConstraint("solver", "puzzle", name="solver-and-puzzle"),
+    # )
 class Rating(Base):
     __tablename__ = "ratings"
 
     id = Column(Integer, primary_key=True)
-    solver = Column(String, nullable=False)
-    puzzle = Column(String, nullable=False)
+    solver_id = Column(Integer, ForeignKey("solvers.id"), nullable=False)
+    puzzle_id = Column(Integer, ForeignKey("puzzles.id"), nullable=False)
     rating = Column(Integer, nullable=False)
+    solver = relationship("Solver", back_populates="ratings")
+    puzzle = relationship("Puzzle", back_populates="ratings")
 
     __table_args__ = (
-        UniqueConstraint("solver", "puzzle", name="solver-and-puzzle"),
+        UniqueConstraint("solver_id", "puzzle_id", name="solver-and-puzzle"),
     )
 
 ### Fast API Application ###
@@ -102,7 +124,7 @@ def get_solvers():
     with Session(app.engine) as session:
         ratings = session.query(Rating).all()
         for rating in ratings:
-            puzzles[rating.solver].update({rating.puzzle: rating.rating})
+            puzzles[rating.solver.solver].update({rating.puzzle.puzzle: rating.rating})
 
     return puzzles
 
@@ -117,7 +139,7 @@ def get_solver(solver_name: str):
             raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found.")
         
         for rating in solver_ratings:
-            solver_to_ratings[rating.puzzle] = rating.rating
+            solver_to_ratings[rating.puzzle.puzzle] = rating.rating
 
     return solver_to_ratings
 
@@ -128,23 +150,23 @@ def get_puzzles():
     with Session(app.engine) as session:
         ratings = session.query(Rating).all()
         for rating in ratings:
-            puzzle_info[rating.puzzle].append(rating.rating)
+            puzzle_info[rating.puzzle.puzzle].append(rating.rating)
 
     return puzzle_info
 
 
 @app.get("/api/puzzles/{puzzle}")
 def get_puzzle_ratings(puzzle: str):
-    puzzle = puzzle.title()
     solver_ratings = {}
 
-    with Session(app.engine) as session:  
-        puzzle_ratings = session.query(Rating).filter_by(puzzle=puzzle).all()
+    with Session(app.engine) as session:
+        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle.title()).first()
+        puzzle_ratings = session.query(Rating).filter_by(puzzle_id=puzzle.id).all()
         if not puzzle_ratings:
             raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not found.")
 
         for rating in puzzle_ratings:
-            solver_ratings[rating.solver] = rating.rating
+            solver_ratings[rating.solver.solver] = rating.rating
 
     return solver_ratings
 
@@ -264,10 +286,26 @@ def ensure_puzzle_database(engine: Engine):
 
 
 def add_ratings(puzzles_by_solver: Dict, session: Session):
-    for solver, puzzle_ratings in puzzles_by_solver.items():
-        for puzzle, value in puzzle_ratings.items():
-            rating = Rating(solver=solver, puzzle=puzzle, rating=value)
-            session.add(rating)
+    for solver_name, puzzle_ratings in puzzles_by_solver.items():
+        solver = session.query(Solver).filter_by(solver=solver_name).first()
+        if not solver:
+            solver = Solver(solver=solver_name)
+            session.add(solver)
+            session.flush()
+
+        for puzzle_name, value in puzzle_ratings.items():
+            puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
+            if not puzzle:
+                puzzle = Puzzle(puzzle=puzzle_name)
+                session.add(puzzle)
+                session.flush()
+
+            rating = session.query(Rating).filter_by(solver_id=solver.id, puzzle_id=puzzle.id).first()
+            if not rating:
+                rating = Rating(solver=solver, puzzle=puzzle, rating=value)
+                session.add(rating)
+            else:
+                rating.rating = value
 
 
 def initialize_ratings_table(engine, puzzles_by_solver: dict):
@@ -286,22 +324,22 @@ def initialize_ratings_table(engine, puzzles_by_solver: dict):
         except IntegrityError as e:
             print(f"Commit failed: {e}")
 
-def update_json_data(engine: Engine):
-    updated_solver_data = []
-    with Session(engine) as session:
-        solvers = session.query(Rating.solver).distinct()
-        for solver_name in solvers:
-            solver_entry = {}
-            solver_ratings = session.query(Rating).filter_by(solver=solver_name[0]).all()
-            solver_entry["name"] = solver_name[0]
-            solver_entry["puzzles"] = {}
-            for puzzle_rating in solver_ratings:
-                solver_entry["puzzles"][puzzle_rating.puzzle] = puzzle_rating.rating
+# def update_json_data(engine: Engine):
+#     updated_solver_data = []
+#     with Session(engine) as session:
+#         solvers = session.query(Rating.solver).distinct()
+#         for solver_name in solvers:
+#             solver_entry = {}
+#             solver_ratings = session.query(Rating).filter_by(solver=solver_name[0]).all()
+#             solver_entry["name"] = solver_name[0]
+#             solver_entry["puzzles"] = {}
+#             for puzzle_rating in solver_ratings:
+#                 solver_entry["puzzles"][puzzle_rating.puzzle] = puzzle_rating.rating
 
-            updated_solver_data.append(solver_entry)
+#             updated_solver_data.append(solver_entry)
     
-        with open("example_files/fam_fav_puzzles.json", "w") as puzzle_file:
-            json.dump(updated_solver_data, puzzle_file, indent=2)
+#         with open("example_files/fam_fav_puzzles.json", "w") as puzzle_file:
+#             json.dump(updated_solver_data, puzzle_file, indent=2)
 
 ### Supporting functions ###
 def parse_solvers_file(filename, ext) -> list:
@@ -383,7 +421,7 @@ def run(engine: Engine, args: argparse.Namespace):
 
 def shutdown(engine: Engine):
     # Save database updates back to json file
-    update_json_data(engine)
+    # update_json_data(engine)
     
     with Session(engine) as session:
         # Clear out table entries on shutdown.
