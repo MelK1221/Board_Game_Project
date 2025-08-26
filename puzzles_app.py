@@ -132,9 +132,9 @@ def get_solvers():
 @app.get("/api/solvers/{solver_name}")
 def get_solver(solver_name: str):
     solver_to_ratings = {}
-    solver_name = solver_name.title()
-    with Session(app.engine) as session:  
-        solver_ratings = session.query(Rating).filter_by(solver=solver_name).all()
+    with Session(app.engine) as session:
+        solver = session.query(Solver).filter_by(solver=solver_name.title()).first()
+        solver_ratings = session.query(Rating).filter_by(solver_id=solver.id).all()
         if not solver_ratings:
             raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found.")
         
@@ -173,11 +173,11 @@ def get_puzzle_ratings(puzzle: str):
 
 @app.get("/api/puzzles/{puzzle}/{solver_name}")
 def get_solver_rating(puzzle: str, solver_name: str):
-    solver_name = solver_name.title()
-    puzzle = puzzle.title()
     rating = None
     with Session(app.engine) as session:  
-        ratings = session.query(Rating).filter_by(puzzle=puzzle, solver=solver_name).all()
+        solver = session.query(Solver).filter_by(solver=solver_name.title()).first()
+        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle.title()).first()
+        ratings = session.query(Rating).filter_by(puzzle=puzzle, solver_id=solver.id).all()
         if not ratings:
             raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {solver_name}.")
 
@@ -196,26 +196,26 @@ def update_solver_rating(
     Update rating of existing puzzle in database.
     Returns dict of solver whose puzzle rating was updated.
     """
-    puzzle = puzzle.title()
-    solver_name = solver_name.title()
     updated_rating_entry = {}
 
     with Session(app.engine) as session:
-        ratings = session.query(Rating).filter_by(puzzle=puzzle, solver=solver_name).all()
+        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle.title()).first()
+        solver = session.query(Solver).filter_by(solver=solver_name.title()).first()
+        ratings = session.query(Rating).filter_by(puzzle_id=puzzle.id, solver_id=solver.id).all()
 
         if not ratings:
             raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {solver_name}.")
         
         ratings[0].rating = rating
         session.commit()
-        updated_rating_entry[puzzle] = ratings[0].rating
+        updated_rating_entry[puzzle.puzzle] = ratings[0].rating
 
     return SolverEntry(name=solver_name, puzzles=updated_rating_entry)
 
 
 @app.post("/api/puzzles/{puzzle}/{solver_name}", response_model = SolverEntry, status_code=201)
 def add_puzzle_rating(
-    puzzle: str,
+    puzzle_name: str,
     solver_name: str,
     rating: int
 ):
@@ -223,20 +223,33 @@ def add_puzzle_rating(
     Create new rated puzzle entry.
     Returns dict of solver new entry added to.
     """
-    puzzle = puzzle.title()
-    solver_name = solver_name.title()
     updated_rating_entry = {}
 
     with Session(app.engine) as session:      
         try:
-            new_rating = Rating(solver=solver_name, puzzle=puzzle, rating=rating)
+            puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name.title()).first()
+            solver = session.query(Solver).filter_by(solver=solver_name.title()).first()
+
+            if not puzzle:
+                new_puzzle = Puzzle(puzzle=puzzle_name.title())
+                session.add(new_puzzle)
+                session.commit()
+                puzzle = new_puzzle
+
+            if not solver:
+                new_solver = Solver(solver=solver_name.title())
+                session.add(new_solver)
+                session.commit()
+                solver = new_solver
+
+            new_rating = Rating(solver_id=solver.id, puzzle_id=puzzle.id, rating=rating)
             session.add(new_rating)
             session.commit()
         except IntegrityError:
             session.rollback()
             raise HTTPException(status_code=409, detail=f"Puzzle {puzzle} has already been rated by {solver_name}.")
 
-        updated_rating_entry[puzzle] = rating
+        updated_rating_entry[puzzle.puzzle] = rating
 
 
     return SolverEntry(name=solver_name, puzzles=updated_rating_entry)
@@ -244,21 +257,29 @@ def add_puzzle_rating(
 
 @app.delete("/api/puzzles/{puzzle}/{solver_name}", status_code=204)
 def delete_puzzle_rating(
-    puzzle: str,
+    puzzle_name: str,
     solver_name: str
 ):
     """
     Delete rated puzzle from solver entry.
     Returns dict of solver puzzle rating deleted from.
     """
-    puzzle = puzzle.title()
-    solver_name = solver_name.title()
     solver_to_ratings = {}
+    puzzle_name = puzzle_name.title()
+    solver_name = solver_name.title()
 
     with Session(app.engine) as session:
-        ratings = session.query(Rating).filter_by(puzzle=puzzle, solver=solver_name).all()
+        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
+        if not puzzle:
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} not found in database.")
+        
+        solver = session.query(Solver).filter_by(solver=solver_name).first()
+        if not solver:
+            raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found in database.")
+
+        ratings = session.query(Rating).filter_by(puzzle_id=puzzle.id, solver_id=solver.id).all()
         if not ratings:
-            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {solver_name}.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} not rated by {solver_name}.")
             
         session.delete(ratings[0])
         session.commit()
