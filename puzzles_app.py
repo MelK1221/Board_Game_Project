@@ -54,10 +54,6 @@ class Puzzle(Base):
 
     ratings = relationship("Rating", back_populates="puzzle")
 
-    # __table_args__ = (
-    #     UniqueConstraint("solver", "puzzle", name="solver-and-puzzle"),
-    # )
-
 class Solver(Base):
     __tablename__ = "solvers"
 
@@ -66,9 +62,6 @@ class Solver(Base):
 
     ratings = relationship("Rating", back_populates="solver")
 
-    # __table_args__ = (
-    #     UniqueConstraint("solver", "puzzle", name="solver-and-puzzle"),
-    # )
 class Rating(Base):
     __tablename__ = "ratings"
 

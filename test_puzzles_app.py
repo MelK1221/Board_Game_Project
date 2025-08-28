@@ -113,19 +113,11 @@ class MockSession:
     def add(self, entry):
         db = self._get_db()
 
-        # Assign IDs to Solver / Puzzle if missing
-        if isinstance(entry, Solver) and entry.id is None:
-            entry.id = db.next_id(Solver)
-
-        if isinstance(entry, Puzzle) and entry.id is None:
-            entry.id = db.next_id(Puzzle)
-
-        # Handle Ratings
         if isinstance(entry, Rating):
 
             # Handle solver
             if entry.solver is None:
-                if hasattr(entry, "solver_id") and entry.solver_id is not None:
+                if entry.solver_id is not None:
                     entry.solver = Solver(id=entry.solver_id)
                 else:
                     entry.solver = Solver(id=db.next_id(Solver))
@@ -134,27 +126,17 @@ class MockSession:
 
             # Handle puzzle
             if entry.puzzle is None:
-                if hasattr(entry, "puzzle_id") and entry.puzzle_id is not None:
+                if entry.puzzle_id is not None:
                     entry.puzzle = Puzzle(id=entry.puzzle_id)
                 else:
                     entry.puzzle = Puzzle(id=db.next_id(Puzzle))
             elif entry.puzzle.id is None:
                 entry.puzzle.id = db.next_id(Puzzle)
 
-            # Duplicate check by solver_id + puzzle_id
+            # Check for duplicate rating entry
             for table_entry in db.entries:
                 if isinstance(table_entry, Rating):
-                    solver_match = (
-                        table_entry.solver.id == entry.solver.id
-                        if table_entry.solver and entry.solver
-                        else False
-                    )
-                    puzzle_match = (
-                        table_entry.puzzle.id == entry.puzzle.id
-                        if table_entry.puzzle and entry.puzzle
-                        else False
-                    )
-                    if solver_match and puzzle_match:
+                    if table_entry.solver.id == entry.solver.id and table_entry.puzzle.id == entry.puzzle.id:
                         raise IntegrityError(statement=None, params=None, orig=Exception())
 
         db.entries.append(entry)
