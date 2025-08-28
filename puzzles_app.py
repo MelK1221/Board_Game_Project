@@ -132,11 +132,15 @@ def get_solvers():
 @app.get("/api/solvers/{solver_name}")
 def get_solver(solver_name: str):
     solver_to_ratings = {}
+    solver_name = solver_name.title()
     with Session(app.engine) as session:
-        solver = session.query(Solver).filter_by(solver=solver_name.title()).first()
+        solver = session.query(Solver).filter_by(solver=solver_name).first()
+        if not solver:
+            raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found.")
+        
         solver_ratings = session.query(Rating).filter_by(solver_id=solver.id).all()
         if not solver_ratings:
-            raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found.")
+            raise HTTPException(status_code=404, detail=f"Solver {solver_name} has not rated any puzzles.")
         
         for rating in solver_ratings:
             solver_to_ratings[rating.puzzle.puzzle] = rating.rating
@@ -155,15 +159,20 @@ def get_puzzles():
     return puzzle_info
 
 
-@app.get("/api/puzzles/{puzzle}")
-def get_puzzle_ratings(puzzle: str):
+@app.get("/api/puzzles/{puzzle_name}")
+def get_puzzle_ratings(puzzle_name: str):
     solver_ratings = {}
+    puzzle_name = puzzle_name.title()
 
     with Session(app.engine) as session:
-        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle.title()).first()
+        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
+        if not puzzle:
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} not found.")
+
+
         puzzle_ratings = session.query(Rating).filter_by(puzzle_id=puzzle.id).all()
         if not puzzle_ratings:
-            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not found.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} has not been rated.")
 
         for rating in puzzle_ratings:
             solver_ratings[rating.solver.solver] = rating.rating
@@ -171,24 +180,32 @@ def get_puzzle_ratings(puzzle: str):
     return solver_ratings
 
 
-@app.get("/api/puzzles/{puzzle}/{solver_name}")
-def get_solver_rating(puzzle: str, solver_name: str):
+@app.get("/api/puzzles/{puzzle_name}/{solver_name}")
+def get_solver_rating(puzzle_name: str, solver_name: str):
     rating = None
+    puzzle_name = puzzle_name.title()
+    solver_name = solver_name.title()
     with Session(app.engine) as session:  
-        solver = session.query(Solver).filter_by(solver=solver_name.title()).first()
-        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle.title()).first()
-        ratings = session.query(Rating).filter_by(puzzle=puzzle, solver_id=solver.id).all()
+        solver = session.query(Solver).filter_by(solver=solver_name).first()
+        if not solver:
+            raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found.")
+        
+        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
+        if not puzzle:
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} not found.")
+        
+        ratings = session.query(Rating).filter_by(puzzle_id=puzzle.id, solver_id=solver.id).all()
         if not ratings:
-            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {solver_name}.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} not rated by {solver_name}.")
 
     rating = ratings[0].rating
 
     return rating
 
 
-@app.patch("/api/puzzles/{puzzle}/{solver_name}", response_model = SolverEntry)
+@app.patch("/api/puzzles/{puzzle_name}/{solver_name}", response_model = SolverEntry)
 def update_solver_rating(
-    puzzle: str,
+    puzzle_name: str,
     solver_name: str,
     rating: int
 ):
@@ -197,14 +214,21 @@ def update_solver_rating(
     Returns dict of solver whose puzzle rating was updated.
     """
     updated_rating_entry = {}
+    puzzle_name = puzzle_name.title()
+    solver_name = solver_name.title()
 
     with Session(app.engine) as session:
-        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle.title()).first()
-        solver = session.query(Solver).filter_by(solver=solver_name.title()).first()
-        ratings = session.query(Rating).filter_by(puzzle_id=puzzle.id, solver_id=solver.id).all()
+        puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
+        if not puzzle:
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} not found.")
+        
+        solver = session.query(Solver).filter_by(solver=solver_name).first()
+        if not solver:
+            raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found.")
 
+        ratings = session.query(Rating).filter_by(puzzle_id=puzzle.id, solver_id=solver.id).all()
         if not ratings:
-            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} not rated by {solver_name}.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} not rated by {solver_name}.")
         
         ratings[0].rating = rating
         session.commit()
@@ -213,7 +237,7 @@ def update_solver_rating(
     return SolverEntry(name=solver_name, puzzles=updated_rating_entry)
 
 
-@app.post("/api/puzzles/{puzzle}/{solver_name}", response_model = SolverEntry, status_code=201)
+@app.post("/api/puzzles/{puzzle_name}/{solver_name}", response_model = SolverEntry, status_code=201)
 def add_puzzle_rating(
     puzzle_name: str,
     solver_name: str,
@@ -224,20 +248,22 @@ def add_puzzle_rating(
     Returns dict of solver new entry added to.
     """
     updated_rating_entry = {}
+    puzzle_name = puzzle_name.title()
+    solver_name = solver_name.title()
 
     with Session(app.engine) as session:      
         try:
-            puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name.title()).first()
-            solver = session.query(Solver).filter_by(solver=solver_name.title()).first()
+            puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
+            solver = session.query(Solver).filter_by(solver=solver_name).first()
 
             if not puzzle:
-                new_puzzle = Puzzle(puzzle=puzzle_name.title())
+                new_puzzle = Puzzle(puzzle=puzzle_name)
                 session.add(new_puzzle)
                 session.commit()
                 puzzle = new_puzzle
 
             if not solver:
-                new_solver = Solver(solver=solver_name.title())
+                new_solver = Solver(solver=solver_name)
                 session.add(new_solver)
                 session.commit()
                 solver = new_solver
@@ -247,7 +273,7 @@ def add_puzzle_rating(
             session.commit()
         except IntegrityError:
             session.rollback()
-            raise HTTPException(status_code=409, detail=f"Puzzle {puzzle} has already been rated by {solver_name}.")
+            raise HTTPException(status_code=409, detail=f"Puzzle {puzzle_name} has already been rated by {solver_name}.")
 
         updated_rating_entry[puzzle.puzzle] = rating
 
@@ -255,7 +281,7 @@ def add_puzzle_rating(
     return SolverEntry(name=solver_name, puzzles=updated_rating_entry)
 
 
-@app.delete("/api/puzzles/{puzzle}/{solver_name}", status_code=204)
+@app.delete("/api/puzzles/{puzzle_name}/{solver_name}", status_code=204)
 def delete_puzzle_rating(
     puzzle_name: str,
     solver_name: str
@@ -271,11 +297,11 @@ def delete_puzzle_rating(
     with Session(app.engine) as session:
         puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
         if not puzzle:
-            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} not found in database.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} not found.")
         
         solver = session.query(Solver).filter_by(solver=solver_name).first()
         if not solver:
-            raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found in database.")
+            raise HTTPException(status_code=404, detail=f"Solver {solver_name} not found.")
 
         ratings = session.query(Rating).filter_by(puzzle_id=puzzle.id, solver_id=solver.id).all()
         if not ratings:

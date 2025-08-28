@@ -9,8 +9,9 @@ from sqlalchemy.exc import IntegrityError
 from fastapi.testclient import TestClient
 from pytest import mark
 from unittest.mock import patch, MagicMock
+from collections import defaultdict
 
-from puzzles_app import add_ratings, create_puzzles_by_solver, app
+from puzzles_app import add_ratings, create_puzzles_by_solver, app, Puzzle, Solver, Rating
 
 
 ### Setup Test Data ###
@@ -61,25 +62,39 @@ class MockQueryResult:
         for item in self.results:
             matches = True
             for k, v in kwargs.items():
-                if getattr(item, k) != v:
+                attr_val = getattr(item, k, None)
+                # fallback for solver_id / puzzle_id
+                if attr_val is None and k.endswith("_id"):
+                    rel_name = k[:-3]  # strip "_id"
+                    rel_obj = getattr(item, rel_name, None)
+                    if rel_obj is not None:
+                        attr_val = getattr(rel_obj, "id", None)
+                if attr_val != v:
                     matches = False
                     break
-
             if matches:
                 filtered.append(item)
-        
         return MockQueryResult(filtered)
     
     def distinct(self):
-        unique = set(self.results)
+        unique = list({id(x): x for x in self.results}.values())
         return MockQueryResult(list(unique))
 
     def all(self):
         return self.results
-
+    
+    def first(self):
+        if not self.results:
+            return None
+        return self.results[0]
 class MockDB:
     def __init__(self):
         self.entries = []
+        self._id_counters = defaultdict(int)
+
+    def next_id(self, model_cls):
+        self._id_counters[model_cls] += 1
+        return self._id_counters[model_cls]
 
 class MockSession:
     
@@ -97,10 +112,53 @@ class MockSession:
 
     def add(self, entry):
         db = self._get_db()
-        for rating in db.entries:
-            if rating.solver == entry.solver and rating.puzzle == entry.puzzle:
-                raise IntegrityError(statement=None, params=None, orig=Exception("Duplicate Entry"))
+
+        # Assign IDs to Solver / Puzzle if missing
+        if isinstance(entry, Solver) and entry.id is None:
+            entry.id = db.next_id(Solver)
+
+        if isinstance(entry, Puzzle) and entry.id is None:
+            entry.id = db.next_id(Puzzle)
+
+        # Handle Ratings
+        if isinstance(entry, Rating):
+
+            # Handle solver
+            if entry.solver is None:
+                if hasattr(entry, "solver_id") and entry.solver_id is not None:
+                    entry.solver = Solver(id=entry.solver_id)
+                else:
+                    entry.solver = Solver(id=db.next_id(Solver))
+            elif entry.solver.id is None:
+                entry.solver.id = db.next_id(Solver)
+
+            # Handle puzzle
+            if entry.puzzle is None:
+                if hasattr(entry, "puzzle_id") and entry.puzzle_id is not None:
+                    entry.puzzle = Puzzle(id=entry.puzzle_id)
+                else:
+                    entry.puzzle = Puzzle(id=db.next_id(Puzzle))
+            elif entry.puzzle.id is None:
+                entry.puzzle.id = db.next_id(Puzzle)
+
+            # Duplicate check by solver_id + puzzle_id
+            for table_entry in db.entries:
+                if isinstance(table_entry, Rating):
+                    solver_match = (
+                        table_entry.solver.id == entry.solver.id
+                        if table_entry.solver and entry.solver
+                        else False
+                    )
+                    puzzle_match = (
+                        table_entry.puzzle.id == entry.puzzle.id
+                        if table_entry.puzzle and entry.puzzle
+                        else False
+                    )
+                    if solver_match and puzzle_match:
+                        raise IntegrityError(statement=None, params=None, orig=Exception())
+
         db.entries.append(entry)
+
 
     def query(self, T):
         # Note: The type T can be a table class or a particular column in that class
@@ -122,6 +180,9 @@ class MockSession:
     def delete(self, entry):
         db = self._get_db()
         db.entries.remove(entry)
+
+    def flush(self):
+        pass
 
 class TestAPIBase:
     @classmethod
@@ -300,13 +361,13 @@ class TestAPIPuzzlesPath(TestAPIBase):
     def test_get_solver_rating_invalid_name(self):
         response = self.client.get("/api/puzzles/the%20mystic%20maze/bad")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Puzzle The Mystic Maze not rated by Bad."}
+        assert response.json() == {"detail": "Solver Bad not found."}
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_get_solver_rating_invalid_puzzle(self):
         response = self.client.get("/api/puzzles/zelda/em")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Puzzle Zelda not rated by Em."}
+        assert response.json() == {"detail": "Puzzle Zelda not found."}
   
 
 # Test patch/post/delete methods
@@ -332,13 +393,13 @@ class TestAPIRatingMods(TestAPIBase):
     def test_patch_invalid_name(self):
         response = self.client.patch("/api/puzzles/the%20mystic%20maze/bad?rating=4")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Puzzle The Mystic Maze not rated by Bad."}
+        assert response.json() == {"detail": "Solver Bad not found."}
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_patch_invalid_puzzle(self):
         response = self.client.patch("/api/puzzles/bad/mel?rating=4")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Puzzle Bad not rated by Mel."}
+        assert response.json() == {"detail": "Puzzle Bad not found."}
 
     # ============ Test Post Methods =============
     @patch("puzzles_app.Session", new=MockSession)
@@ -376,10 +437,10 @@ class TestAPIRatingMods(TestAPIBase):
     def test_delete_invalid_puzzle(self):
         response = self.client.delete("/api/puzzles/bad/mel")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Puzzle Bad not rated by Mel."}
+        assert response.json() == {"detail": "Puzzle Bad not found."}
 
     @patch("puzzles_app.Session", new=MockSession)
     def test_delete_invalid_name(self):
         response = self.client.delete("/api/puzzles/the%20mystic%20maze/bad")
         assert response.status_code == 404
-        assert response.json() == {"detail": "Puzzle The Mystic Maze not rated by Bad."}
+        assert response.json() == {"detail": "Solver Bad not found."}
