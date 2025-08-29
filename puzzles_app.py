@@ -252,22 +252,20 @@ def add_puzzle_rating(
             if not puzzle:
                 new_puzzle = Puzzle(puzzle=puzzle_name)
                 session.add(new_puzzle)
-                session.commit()
                 puzzle = new_puzzle
 
             if not solver:
                 new_solver = Solver(solver=solver_name)
                 session.add(new_solver)
-                session.commit()
                 solver = new_solver
 
             new_rating = Rating(solver_id=solver.id, puzzle_id=puzzle.id, rating=rating)
             session.add(new_rating)
-            session.commit()
         except IntegrityError:
             session.rollback()
             raise HTTPException(status_code=409, detail=f"Puzzle {puzzle_name} has already been rated by {solver_name}.")
 
+        session.commit()
         updated_rating_entry[puzzle.puzzle] = rating
 
 
@@ -331,14 +329,12 @@ def add_ratings(puzzles_by_solver: Dict, session: Session):
         if not solver:
             solver = Solver(solver=solver_name)
             session.add(solver)
-            session.flush()
 
         for puzzle_name, value in puzzle_ratings.items():
             puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
             if not puzzle:
                 puzzle = Puzzle(puzzle=puzzle_name)
                 session.add(puzzle)
-                session.flush()
 
             rating = session.query(Rating).filter_by(solver_id=solver.id, puzzle_id=puzzle.id).first()
             if not rating:
