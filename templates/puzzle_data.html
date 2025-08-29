@@ -28,7 +28,7 @@ $(document).ready(function() {
         "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
         "iDisplayLength": -1,
         "ajax": {
-            "url": "{{ request.url_for('get_puzzle_ratings', puzzle=puzzle) }}",
+            "url": "{{ request.url_for('get_puzzle_ratings', puzzle_name=puzzle) }}",
             "dataSrc": function(json) {
                 // Convert {name: rating} → array of objects
                 return Object.entries(json).map(([name, rating]) => {

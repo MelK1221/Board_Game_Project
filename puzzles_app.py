@@ -165,7 +165,7 @@ def get_puzzle_ratings(puzzle_name: str):
 
         puzzle_ratings = session.query(Rating).filter_by(puzzle_id=puzzle.id).all()
         if not puzzle_ratings:
-            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle} has not been rated.")
+            raise HTTPException(status_code=404, detail=f"Puzzle {puzzle_name} has not been rated.")
 
         for rating in puzzle_ratings:
             solver_ratings[rating.solver.solver] = rating.rating
@@ -364,22 +364,22 @@ def initialize_ratings_table(engine, puzzles_by_solver: dict):
         except IntegrityError as e:
             print(f"Commit failed: {e}")
 
-# def update_json_data(engine: Engine):
-#     updated_solver_data = []
-#     with Session(engine) as session:
-#         solvers = session.query(Rating.solver).distinct()
-#         for solver_name in solvers:
-#             solver_entry = {}
-#             solver_ratings = session.query(Rating).filter_by(solver=solver_name[0]).all()
-#             solver_entry["name"] = solver_name[0]
-#             solver_entry["puzzles"] = {}
-#             for puzzle_rating in solver_ratings:
-#                 solver_entry["puzzles"][puzzle_rating.puzzle] = puzzle_rating.rating
+def update_json_data(engine: Engine):
+    updated_solver_data = []
+    with Session(engine) as session:
+        solvers = session.query(Solver).all()
+        for solver_name in solvers:
+            solver_entry = {}
+            solver_ratings = session.query(Rating).filter_by(solver_id=solver_name.id).all()
+            solver_entry["name"] = solver_name.solver
+            solver_entry["puzzles"] = {}
+            for puzzle_rating in solver_ratings:
+                solver_entry["puzzles"][puzzle_rating.puzzle.puzzle] = puzzle_rating.rating
 
-#             updated_solver_data.append(solver_entry)
+            updated_solver_data.append(solver_entry)
     
-#         with open("example_files/fam_fav_puzzles.json", "w") as puzzle_file:
-#             json.dump(updated_solver_data, puzzle_file, indent=2)
+        with open("example_files/fam_fav_puzzles.json", "w") as puzzle_file:
+            json.dump(updated_solver_data, puzzle_file, indent=2)
 
 ### Supporting functions ###
 def parse_solvers_file(filename, ext) -> list:
@@ -459,13 +459,16 @@ def run(engine: Engine, args: argparse.Namespace):
     uvicorn.run(app, host="localhost", port=args.port)
 
 
-def shutdown(engine: Engine):
+def shutdown(engine: Engine, error_status: bool):
     # Save database updates back to json file
-    # update_json_data(engine)
+    if not error_status:
+        update_json_data(engine)
     
     with Session(engine) as session:
         # Clear out table entries on shutdown.
         session.query(Rating).delete()
+        session.query(Solver).delete()
+        session.query(Puzzle).delete()
         session.commit()
 
 
@@ -483,11 +486,13 @@ def parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
+    error_status = False
     args = parse_args()
     engine = connect_to_database()
     try:
         run(engine, args)
     except (FileNotFoundError, SolverNotFoundError, ValueError, ValidationError) as e:
         print(e)
+        error_status = True
     finally:
-        shutdown(engine)
+        shutdown(engine, error_status)
