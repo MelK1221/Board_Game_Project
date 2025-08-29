@@ -2,3 +2,4 @@
 __pycache__/
 .DS_Store
 password.txt
+reset_db.py
