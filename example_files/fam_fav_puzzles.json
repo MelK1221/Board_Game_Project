@@ -1,60 +1,74 @@
 [
   {
-    "name": "Em",
-    "puzzles": {
-      "Decaying Diner": 7,
-      "The Mystic Maze": 9,
-      "Hotel Vacancy": 8,
-      "The Crystal Caves": 10,
-      "The Puzzled Patron": 6,
-      "Jaws": 8
+    "table": "Solvers",
+    "items": {
+      "Em": {"location": "Los Alamos, NM"},
+      "Mel": {"location": "Auburn Hills, MI"},
+      "Sarah": {"location": "Lewis Center, OH"},
+      "Laurie": {"location": "Bay Village, OH"},
+      "Mike": {"location": "Bay Village, OH"}
     }
   },
   {
-    "name": "New Solver",
-    "puzzles": {
-      "New Puzzle": 6
+    "table": "Puzzles",
+    "items": {
+      "Decaying Diner": {"creator": "Ravensburger"},
+      "The Mystic Maze": {"creator": "The Magic Puzzle Company"},
+      "Hotel Vacancy": {"creator": "Ravensburger"},
+      "The Crystal Caves": {"creator": "The Magic Puzzle Company"},
+      "The Puzzled Patron": {"creator": "The Magic Puzzle Company"},
+      "Jaws": {"creator": "Ravensburger"},
+      "The Gnomes Homes": {"creator": "The Magic Puzzle Company"},
+      "Spirit Island In Canada": {"creator": "Ravensburger"},
+      "The Sunny City": {"creator": "The Magic Puzzle Company"},
+      "Kitchen Cupboard": {"creator": "Ravensburger"},
+      "Race Of The Baby Sea Turtles": {"creator": "Ravensburger"},
+      "Little Garden World": {"creator": "Ravensburger"},
+      "The Beach Hut": {"creator": "Ravensburger"},
+      "Lake Matheson, New Zealand": {"creator": "Ravensburger"},
+      "No Dogs On The Beach": {"creator": "Ravensburger"},
+      "Looney Tunes - Challenge": {"creator": "Ravensburger"},
+      "Cabinet of Curiosities": {"creator": "Ravensburger"},
+      "The Secret Soup": {"creator": "The Magic Puzzle Company"},
+      "Cat Tree Heaven": {"creator": "Ravensburger"},
+      "The Drippy Trip": {"creator": "The Magic Puzzle Company"},
+      "Wolves In The Forest": {"creator": "Ravensburger"},
+      "The Happy Isles": {"creator": "The Magic Puzzle Company"},
+      "Sistine Chapel": {"creator": "Ravensburger"},
+      "The Busy Bistro": {"creator": "The Magic Puzzle Company"},
+      "The Forest Feast": {"creator": "The Magic Puzzle Company"}
     }
   },
   {
-    "name": "Mel",
-    "puzzles": {
-      "The Gnomes Homes": 8,
-      "Spirit Island In Canada": 7,
-      "The Sunny City": 9,
-      "Kitchen Cupboard": 6,
-      "Race Of The Baby Sea Turtles": 10,
-      "Jaws": 9
-    }
-  },
-  {
-    "name": "Laurie",
-    "puzzles": {
-      "Little Garden World": 7,
-      "The Beach Hut": 8,
-      "Lake Matheson, New Zealand": 9,
-      "No Dogs On The Beach": 6,
-      "Looney Tunes - Challenge": 10
-    }
-  },
-  {
-    "name": "Sarah",
-    "puzzles": {
-      "Cabinet Of Curiosities": 9,
-      "The Secret Soup": 7,
-      "Cat Tree Heaven": 8,
-      "The Drippy Trip": 6,
-      "Jaws": 7
-    }
-  },
-  {
-    "name": "Mike",
-    "puzzles": {
-      "Wolves In The Forest": 9,
-      "The Happy Isles": 7,
-      "Sistine Chapel": 8,
-      "The Busy Bistro": 6,
-      "The Forest Feast": 10
-    }
+    "table": "Ratings",
+    "items": [
+      {"solver": "Em", "puzzle": "Decaying Diner", "rating": 7},
+      {"solver": "Em", "puzzle": "The Mystic Maze", "rating": 9},
+      {"solver": "Em", "puzzle": "Hotel Vacancy", "rating": 8},
+      {"solver": "Em", "puzzle": "The Crystal Caves", "rating": 10},
+      {"solver": "Em", "puzzle": "The Puzzled Patron", "rating": 6},
+      {"solver": "Em", "puzzle": "Jaws", "rating": 8},
+      {"solver": "Mel", "puzzle": "The Gnomes Homes", "rating": 8},
+      {"solver": "Mel", "puzzle": "Spirit Island In Canada", "rating": 7},
+      {"solver": "Mel", "puzzle": "The Sunny City", "rating": 9},
+      {"solver": "Mel", "puzzle": "Kitchen Cupboard", "rating": 6},
+      {"solver": "Mel", "puzzle": "Race Of The Baby Sea Turtles", "rating": 10},
+      {"solver": "Mel", "puzzle": "Jaws", "rating": 9},
+      {"solver": "Sarah", "puzzle": "Cabinet Of Curiosities", "rating": 9},
+      {"solver": "Sarah", "puzzle": "The Secret Soup", "rating": 7},
+      {"solver": "Sarah", "puzzle": "Cat Tree Heaven", "rating": 8},
+      {"solver": "Sarah", "puzzle": "The Drippy Trip", "rating": 6},
+      {"solver": "Sarah", "puzzle": "Jaws", "rating": 7},
+      {"solver": "Laurie", "puzzle": "Little Garden World", "rating": 7},
+      {"solver": "Laurie", "puzzle": "The Beach Hut", "rating": 8},
+      {"solver": "Laurie", "puzzle": "Lake Matheson, New Zealand", "rating": 9},
+      {"solver": "Laurie", "puzzle": "No Dogs On The Beach", "rating": 6},
+      {"solver": "Laurie", "puzzle": "Looney Tunes - Challenge", "rating": 10},
+      {"solver": "Mike", "puzzle": "Wolves In The Forest", "rating": 9},
+      {"solver": "Mike", "puzzle": "The Happy Isles", "rating": 7},
+      {"solver": "Mike", "puzzle": "Sistine Chapel", "rating": 8},
+      {"solver": "Mike", "puzzle": "The Busy Bistro", "rating": 6},
+      {"solver": "Mike", "puzzle": "The Forest Feast", "rating": 10}
+    ]
   }
 ]
