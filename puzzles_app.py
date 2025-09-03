@@ -51,6 +51,7 @@ class Puzzle(Base):
 
     id = Column(Integer, primary_key=True)
     puzzle = Column(String, nullable=False)
+    creator = Column(String, nullable=True, default=None)
 
     ratings = relationship("Rating", back_populates="puzzle")
 
@@ -59,6 +60,7 @@ class Solver(Base):
 
     id = Column(Integer, primary_key=True)
     solver = Column(String, nullable=False)
+    location = Column(String, nullable=True, default=None)
 
     ratings = relationship("Rating", back_populates="solver")
 
@@ -323,28 +325,47 @@ def ensure_puzzle_database(engine: Engine):
         print(f"Initialized database {DB_NAME}")
 
 
-def add_ratings(puzzles_by_solver: Dict, session: Session):
-    for solver_name, puzzle_ratings in puzzles_by_solver.items():
-        solver = session.query(Solver).filter_by(solver=solver_name).first()
-        if not solver:
-            solver = Solver(solver=solver_name)
-            session.add(solver)
+def add_solver(solver_entry: Dict, session: Session):
+    solver_name = next(iter(solver_entry.keys()))
 
-        for puzzle_name, value in puzzle_ratings.items():
-            puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
-            if not puzzle:
-                puzzle = Puzzle(puzzle=puzzle_name)
-                session.add(puzzle)
-
-            rating = session.query(Rating).filter_by(solver_id=solver.id, puzzle_id=puzzle.id).first()
-            if not rating:
-                rating = Rating(solver=solver, puzzle=puzzle, rating=value)
-                session.add(rating)
-            else:
-                rating.rating = value
+    solver_exists = session.query(Solver).filter_by(solver=solver_name).first()
+    if not solver_exists:
+        solver_location = solver_entry[solver_name]["location"]
+        new_solver = Solver(solver=solver_name, location=solver_location)
+        session.add(new_solver)
 
 
-def initialize_ratings_table(engine, puzzles_by_solver: dict):
+def add_puzzle(puzzle_entry: Dict, session: Session):
+    puzzle_name = next(iter(puzzle_entry.keys()))
+
+    puzzle_exists = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
+    if not puzzle_exists:
+        puzzle_creator = puzzle_entry[puzzle_name]["creator"]
+        new_puzzle = Puzzle(puzzle=puzzle_name, creator=puzzle_creator)
+        session.add(new_puzzle)
+
+
+def add_rating(rating_entry: Dict, session: Session):
+    solver_name = rating_entry["solver"]
+    solver_exists = session.query(Solver).filter_by(solver=solver_name).first()
+    if not solver_exists:
+        new_solver = Solver(solver=solver_name)
+        session.add(new_solver)
+
+    puzzle_name = rating_entry["puzzle"]
+    puzzle_exists = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
+    if not puzzle_exists:
+        new_puzzle = Puzzle(puzzle=puzzle_name)
+        session.add(new_puzzle)
+
+    rating_solver = session.query(Solver).filter_by(solver=solver_name).first()
+    rating_puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
+
+    new_rating = Rating(solver_id=rating_solver.id, puzzle_id=rating_puzzle.id, rating = rating_entry["rating"])
+    session.add(new_rating)
+
+
+def initialize_db_tables(engine, tables: list):
     """
     Initialize table in db from the `puzzles_by_solver` mapping
     puzzles_by_solver maps solver_name -> {puzzle -> rating}
@@ -353,7 +374,22 @@ def initialize_ratings_table(engine, puzzles_by_solver: dict):
     Base.metadata.create_all(engine)
 
     with Session(engine) as session:
-        add_ratings(puzzles_by_solver, session)
+        for table in tables:
+            if table["table"] == "Solvers":
+                for item in table["items"]:
+                    item_dict = {}
+                    item_dict[item] = table["items"][item]
+                    add_solver(item_dict, session)
+
+            elif table["table"] == "Puzzles":
+                for item in table["items"]:
+                    item_dict = {}
+                    item_dict[item] = table["items"][item]
+                    add_puzzle(item_dict, session)
+
+            elif table["table"] == "Ratings":
+                for item in table["items"]:
+                    add_rating(item, session)
 
         try:
             session.commit()
@@ -378,14 +414,12 @@ def update_json_data(engine: Engine):
             json.dump(updated_solver_data, puzzle_file, indent=2)
 
 ### Supporting functions ###
-def parse_solvers_file(filename, ext) -> list:
+def parse_tables_file(filename, ext) -> list:
     """
     Returns dict created from loaded file.
     Key -> Solver, Value -> Fav puzzles list.
     Returns empty dict if filename is improper.
     """
-
-    solvers_puzzles_list = []
 
     # Check for csv or json file type
     if (ext != ".json"):
@@ -398,30 +432,22 @@ def parse_solvers_file(filename, ext) -> list:
 
     # Open file and create new solvers dict
     with open(filename) as upload_file:
-        solvers_list = json.load(upload_file)
-
-        # Check for valid file schema
-        validate(instance=solvers_list, schema=schema)
-
-        for solver_dict in solvers_list:
-            solver_dict["name"] = solver_dict["name"].title()
-            solver_dict["puzzles"] = {puzzle.title(): rating for puzzle, rating in solver_dict["puzzles"].items()}
-            solvers_puzzles_list.append(solver_dict)
+        tables_list = json.load(upload_file)
             
-        return solvers_puzzles_list
+        return tables_list
 
 
-def create_puzzles_by_solver(solvers_puzzles_list):
-    """
-    Create dict of solvers and rated
-    puzzles keyed by solver.
-    """
+# def create_puzzles_by_solver(solvers_puzzles_list):
+#     """
+#     Create dict of solvers and rated
+#     puzzles keyed by solver.
+#     """
     
-    puzzles_by_solver = {}
-    for solver in solvers_puzzles_list:
-        puzzles_by_solver[solver["name"]] = solver["puzzles"]
+#     puzzles_by_solver = {}
+#     for solver in solvers_puzzles_list:
+#         puzzles_by_solver[solver["name"]] = solver["puzzles"]
     
-    return puzzles_by_solver
+#     return puzzles_by_solver
 
 
 ### Main application loop ###
@@ -429,27 +455,27 @@ def run(engine: Engine, args: argparse.Namespace):
 
     ensure_puzzle_database(engine)
 
-    solvers_puzzles_list = []
+    tables_list = []
 
     # Check for existence of path
     if os.path.exists(args.file):
         _, extension = os.path.splitext(args.file)
-        solvers_puzzles_list = parse_solvers_file(args.file, extension)
+        tables_list = parse_tables_file(args.file, extension)
     else:
         raise FileNotFoundError(f"File not found: {args.file}")
     
     # Check if solvers exist in dict
-    if not solvers_puzzles_list:
-        msg = "No solvers found in provided file."
+    if not tables_list:
+        msg = "No tables found in provided file."
         raise ValueError(msg)
     
     # Create different maps for endpoint access
-    puzzles_by_solver = create_puzzles_by_solver(solvers_puzzles_list)
+    # puzzles_by_solver = create_puzzles_by_solver(solvers_puzzles_list)
 
     # Database connection
     app.engine = engine
 
-    initialize_ratings_table(engine, puzzles_by_solver)
+    initialize_db_tables(engine, tables_list)
 
     # Start server
     uvicorn.run(app, host="localhost", port=args.port)
@@ -457,8 +483,8 @@ def run(engine: Engine, args: argparse.Namespace):
 
 def shutdown(engine: Engine, error_status: bool):
     # Save database updates back to json file
-    if not error_status:
-        update_json_data(engine)
+    # if not error_status:
+    #     update_json_data(engine)
     
     with Session(engine) as session:
         # Clear out table entries on shutdown.
