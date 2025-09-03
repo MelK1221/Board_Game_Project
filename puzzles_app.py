@@ -397,21 +397,27 @@ def initialize_db_tables(engine, tables: list):
             print(f"Commit failed: {e}")
 
 def update_json_data(engine: Engine):
-    updated_solver_data = []
+    updated_solvers = {"table": "Solvers", "items": {}}
+    updated_puzzles = {"table": "Puzzles", "items": {}}
+    updated_ratings = {"table": "Ratings", "items": []}
+
     with Session(engine) as session:
         solvers = session.query(Solver).all()
-        for solver_name in solvers:
-            solver_entry = {}
-            solver_ratings = session.query(Rating).filter_by(solver_id=solver_name.id).all()
-            solver_entry["name"] = solver_name.solver
-            solver_entry["puzzles"] = {}
-            for puzzle_rating in solver_ratings:
-                solver_entry["puzzles"][puzzle_rating.puzzle.puzzle] = puzzle_rating.rating
+        for solver in solvers:
+            updated_solvers["items"][solver.solver] = {"location": solver.location}
+        
+        puzzles = session.query(Puzzle).all()
+        for puzzle in puzzles:
+            updated_puzzles["items"][puzzle.puzzle] = {"creator": puzzle.creator}
 
-            updated_solver_data.append(solver_entry)
+        ratings = session.query(Rating).all()
+        for rating in ratings:
+            updated_ratings["items"].append({"solver": rating.solver.solver, "puzzle": rating.puzzle.puzzle, "rating": rating.rating})
+        
+        updated_tables = [updated_solvers, updated_puzzles, updated_ratings]
     
         with open("example_files/fam_fav_puzzles.json", "w") as puzzle_file:
-            json.dump(updated_solver_data, puzzle_file, indent=2)
+            json.dump(updated_tables, puzzle_file, indent=2)
 
 ### Supporting functions ###
 def parse_tables_file(filename, ext) -> list:
@@ -433,21 +439,11 @@ def parse_tables_file(filename, ext) -> list:
     # Open file and create new solvers dict
     with open(filename) as upload_file:
         tables_list = json.load(upload_file)
+
+        # Check for valid file schema
+        validate(instance=tables_list, schema=schema)
             
         return tables_list
-
-
-# def create_puzzles_by_solver(solvers_puzzles_list):
-#     """
-#     Create dict of solvers and rated
-#     puzzles keyed by solver.
-#     """
-    
-#     puzzles_by_solver = {}
-#     for solver in solvers_puzzles_list:
-#         puzzles_by_solver[solver["name"]] = solver["puzzles"]
-    
-#     return puzzles_by_solver
 
 
 ### Main application loop ###
@@ -483,8 +479,8 @@ def run(engine: Engine, args: argparse.Namespace):
 
 def shutdown(engine: Engine, error_status: bool):
     # Save database updates back to json file
-    # if not error_status:
-    #     update_json_data(engine)
+    if not error_status:
+        update_json_data(engine)
     
     with Session(engine) as session:
         # Clear out table entries on shutdown.
