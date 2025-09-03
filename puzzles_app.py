@@ -248,18 +248,11 @@ def add_puzzle_rating(
 
     with Session(app.engine) as session:      
         try:
+            add_puzzle({puzzle_name:{"creator": None}}, session)
+            add_solver({solver_name:{"location": None}}, session)
+            
             puzzle = session.query(Puzzle).filter_by(puzzle=puzzle_name).first()
             solver = session.query(Solver).filter_by(solver=solver_name).first()
-
-            if not puzzle:
-                new_puzzle = Puzzle(puzzle=puzzle_name)
-                session.add(new_puzzle)
-                puzzle = new_puzzle
-
-            if not solver:
-                new_solver = Solver(solver=solver_name)
-                session.add(new_solver)
-                solver = new_solver
 
             new_rating = Rating(solver_id=solver.id, puzzle_id=puzzle.id, rating=rating)
             session.add(new_rating)
